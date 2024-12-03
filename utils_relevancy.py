@@ -9,7 +9,7 @@ import torch.distributed as dist
 from torch import nn
 import torch.nn.functional as F
 
-from transformers.deepspeed import is_deepspeed_zero3_enabled
+from transformers.integrations.deepspeed import is_deepspeed_zero3_enabled
 from transformers.utils import  logging
 from transformers.generation.beam_constraints import DisjunctiveConstraint, PhrasalConstraint
 from transformers.generation.beam_search import  BeamSearchScorer, ConstrainedBeamSearchScorer
