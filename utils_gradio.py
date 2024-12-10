@@ -40,11 +40,11 @@ If a question does not make any sense, or is not factually coherent, explain why
 # system_prompt ="""A chat between a curious human and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human's questions."""
 
 title_markdown = ("""
-# LVLM-Interpret: An Interpretability Tool for Large Vision-Language Models
+# An Interpretabity tool for Vision Language Models
 """)
 
 tos_markdown = ("""
-### Terms of use
+#### Terms of use
 By using this service, users are required to agree to the following terms:
 The service is a research preview intended for non-commercial use only. It only provides limited safety measures and may generate offensive content. It must not be used for any illegal, harmful, violent, racist, or sexual purposes.
 """)
@@ -278,6 +278,9 @@ def build_demo(args, embed_mode=False):
             #         ], inputs=[imagebox, textbox])
 
         with gr.Tab("Attention analysis"):
+            gr.Markdown("""
+            ### How To Use Attention Analysis:
+            """)
             with gr.Row():
                 with gr.Column(scale=3):
                     # attn_ana_layer = gr.Slider(1, 100, step=1, label="Layer")
@@ -299,6 +302,9 @@ def build_demo(args, embed_mode=False):
             )
 
         with gr.Tab("Attentions"):
+            gr.Markdown("""
+            ### How To Use Attentions:
+            """)
             with gr.Row():
                 attn_select_layer = gr.Slider(1, N_LAYERS, value=32, step=1, label="Layer")
             with gr.Row():
@@ -358,7 +364,12 @@ def build_demo(args, embed_mode=False):
             [generated_text, imagebox_recover, i2t_attn_gallery, i2t_attn_head_mean_plot]
         )
 
+
         with gr.Tab("Relevancy"):
+            gr.Markdown("""
+            ### How to Use Relevancy:
+                * Saliency of each generated token on the image 
+                        """)
             with gr.Row():
                 relevancy_token_dropdown = gr.Dropdown(
                     choices=['llama','vit','all'],
@@ -390,56 +401,6 @@ def build_demo(args, embed_mode=False):
             [relevancy_txt_gallery, relevancy_highlightedtext]
         )
 
-        enable_causality = True
-        with gr.Tab("Causality"):
-            gr.Markdown(
-                """
-                ### *Coming soon*
-                """
-            )
-            state_causal_explainers = gr.State()
-            with gr.Row(visible=enable_causality):
-                causality_dropdown = gr.Dropdown(
-                    choices=[],
-                    interactive=True,
-                    show_label=False,
-                    container=False,
-                    scale=2,
-                )
-                causality_submit = gr.Button(value="Learn Causal Structures", interactive=True, variant='primary', scale=1)
-            with gr.Row(visible=enable_causality):
-                with gr.Accordion("Hyper Parameters", open=False) as causal_parameters_row:
-                        with gr.Row():
-                            with gr.Column(scale=2):
-                                # search_rad_slider= gr.Slider(1, 5, step=1, value=3, label="Search Radius", 
-                                #                              info="The maximal distance on the graph from the explained token.",)
-                                att_th_slider = gr.Slider(minimum=0.0001, maximum=1-0.0001, value=0.005, step=0.0001, interactive=True, label="Raw Attention Threshold",
-                                                          info="A threshold for selecting tokens to be graph nodes.",)
-                            with gr.Column(scale=2):
-                                alpha_slider = gr.Slider(minimum=1e-7, maximum=1e-2, value=1e-5, step=1e-7, interactive=True, label="Statistical Test Threshold (alpha)",
-                                                         info="A threshold for the statistical test of conditional independence.",)
-                                # dof_slider = gr.Slider(minimum=32, maximum=1024, value=128, step=1, interactive=True, label="Degrees of Freedom",
-                                #                        info="Degrees of freedom of correlation matrix.")
-            with gr.Row(visible=enable_causality):
-                pds_plot = gr.Image(type="pil", label='Preprocessed image')
-                causal_head_gallery = gr.Gallery(type="pil", label='Causal Head Graph', columns=8, interactive=False)
-            with gr.Row(visible=enable_causality):
-                causal_head_slider = gr.Slider(minimum=0, maximum=31, value=1, step=1, interactive=True, label="Head Selection")
-                causal_head_submit = gr.Button(value="Plot Causal Head", interactive=True, scale=1)
-            with gr.Row(visible=enable_causality):
-                causality_gallery = gr.Gallery(type="pil", label='Causal Heatmaps', columns=8, interactive=False)
-    
-        causal_head_submit.click(
-            handle_causal_head,
-            [state, state_causal_explainers, causal_head_slider, causality_dropdown],
-            [causal_head_gallery, pds_plot]
-        )
-        
-        causality_submit.click(
-            handle_causality,
-            [state, state_causal_explainers, causality_dropdown, alpha_slider, att_th_slider],
-            [causality_gallery, state_causal_explainers]
-        )
 
         if not embed_mode:
             gr.Markdown(tos_markdown)
@@ -464,32 +425,8 @@ def build_demo(args, embed_mode=False):
             attn_update_slider,
             [state],
             [state, attn_select_layer]
-        ).then(
-            causality_update_dropdown,
-            [state],
-            [state, causality_dropdown]
         )
-        # .then(
-        #     handle_box_reset, 
-        #     [imagebox_recover,box_states], 
-        #     [imagebox_recover_boxable, box_states]
-        # ).then(
-        #     handle_attentions_i2t,
-        #     [state, generated_text, attn_select_layer],
-        #     [generated_text, imagebox_recover, i2t_attn_gallery, i2t_attn_head_mean_plot]
-        # ).then(
-        #     clear_canvas,
-        #     [],
-        #     [imagebox]
-        # ).then(
-        #     handle_relevancy,
-        #     [state, relevancy_token_dropdown],
-        #     [relevancy_gallery]
-        # ).then(
-        #     handle_text_relevancy,
-        #     [state, relevancy_token_dropdown],
-        #     [relevancy_txt_gallery, relevancy_highlightedtext]
-        # )
+
         submit_btn.click(
             add_text,
             [state, textbox, imagebox, image_process_mode],
@@ -503,33 +440,9 @@ def build_demo(args, embed_mode=False):
             attn_update_slider,
             [state],
             [state, attn_select_layer]
-        ).then(
-            causality_update_dropdown,
-            [state],
-            [state, causality_dropdown]
         )
-        # .then(
-        #     causality_update_dropdown,
-        #     [state],
-        #     [causality_dropdown]
-        # ).then(
-        #     handle_box_reset, 
-        #     [imagebox_recover,box_states], 
-        #     [imagebox_recover_boxable, box_states]
-        # ).then(
-        #      plot_attention_analysis,
-        #      [state, attn_modality_select],
-        #      [state, attn_ana_plot]
-        # ).then(
-        #     handle_relevancy,
-        #     [state, relevancy_token_dropdown],
-        #     [relevancy_gallery]
-        # ).then(
-        #     handle_text_relevancy,
-        #     [state, relevancy_token_dropdown],
-        #     [relevancy_txt_gallery, relevancy_highlightedtext]
-        # )
-        
+
 
     return demo
+
 

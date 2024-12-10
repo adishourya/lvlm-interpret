@@ -139,7 +139,8 @@ def show_tokens_on_image(selected_image_tokens, pil_image, weights=None):
     im_mask = tokens_mask.reshape((24, 24))
     im_mask = cmap(im_mask)
     a_im = Image.fromarray((im_mask[:, :, :3] * 255).astype(np.uint8)).resize((336, 336), Image.BICUBIC)
-    a_im.putalpha(128)
+    # a_im.putalpha(128)
+    a_im.putalpha(32)
     new_im = pil_image.copy()
     new_im.paste(a_im, mask=a_im)
     return new_im
