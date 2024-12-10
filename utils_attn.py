@@ -162,10 +162,11 @@ def handle_attentions_i2t(state, highlighted_text, layer_idx=32, token_idx=0):
 
         fig = plt.figure(figsize=(10, 3))
         ax = seaborn.heatmap([img_attn_mean], 
-            cmap="viridis",linewidths=.3, square=True,annot=True, cbar_kws={"orientation": "horizontal", "shrink":0.3}
+            cmap="viridis",linewidths=.3, square=True,annot=True, cbar_kws={"orientation": "vertical", "shrink":0.3}
         )
         ax.set_xlabel('Head number')
-        ax.set_title(f"Mean Attention between the image and the token {[state.output_ids_decoded[tok] for tok in token_idx_list]} for layer {layer_idx+1}")
+        # ax.set_title(f"Mean Attention between the image and the token {[state.output_ids_decoded[tok] for tok in token_idx_list]} for layer {layer_idx+1}")
+        ax.set_title(f"Mean Attention between the image and the token {[state.output_ids_decoded[tok] for tok in token_idx_list]} for all the layers")
 
         fig.tight_layout()
 
@@ -392,7 +393,7 @@ def plot_attention_analysis(state, attn_modality_select):
                 heatmap_mean[layer_idx][head_idx] = ques_attn.mean()
     heatmap_mean_df = pd.DataFrame(heatmap_mean)
     fig = plt.figure(figsize=(4, 4)) 
-    ax = seaborn.heatmap(heatmap_mean_df,square=True, cmap="viridis",cbar_kws={"orientation": "horizontal"})
+    ax = seaborn.heatmap(heatmap_mean_df,square=True, cmap="viridis",cbar_kws={"orientation": "vertical"})
     ax.set_xlabel("Layers")
     ax.set_ylabel("Heads")
     ax.set_title(f"{attn_modality_select} Mean Attention")
@@ -473,7 +474,7 @@ def plot_text_to_image_analysis(state, layer_idx, boxes, head_idx=1 ):
     # sm = plt.cm.ScalarMappable(cmap="coolwarm", norm=norm)
     sm = plt.cm.ScalarMappable(cmap="viridis", norm=norm)
     sm.set_array([]) 
-    cb = fig.colorbar(sm, cax=cax, orientation='horizontal')
+    cb = fig.colorbar(sm, cax=cax, orientation='vertical')
     cb.set_label('Color Legend', labelpad=10, loc="center")
 
     ax_words.axis('off')
@@ -488,7 +489,7 @@ def plot_text_to_image_analysis(state, layer_idx, boxes, head_idx=1 ):
     
     fig2 = plt.figure(figsize=(10, 3))
     ax2 = seaborn.heatmap([attn_image_patch], 
-        linewidths=.3, cmap="viridis",square=True, cbar_kws={"orientation": "horizontal", "shrink":0.3}
+        linewidths=.3,annot=True, cmap="viridis",square=True, cbar_kws={"orientation": "vertical", "shrink":0.3}
     )
     ax2.set_xlabel('Head number')
     ax2.set_title(f"Mean Head Attention between the image patches selected and the answer for layer {layer_idx+1}")
