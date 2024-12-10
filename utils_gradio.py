@@ -390,7 +390,7 @@ def build_demo(args, embed_mode=False):
             [relevancy_txt_gallery, relevancy_highlightedtext]
         )
 
-        enable_causality = False
+        enable_causality = True
         with gr.Tab("Causality"):
             gr.Markdown(
                 """
