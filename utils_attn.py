@@ -59,7 +59,8 @@ def draw_heatmap_on_image(mat, img_recover, normalize=True):
         mat = (mat - mat.min()) / (mat.max() - mat.min())
     mat = cmap(mat)  #.cpu().numpy())
     mat = Image.fromarray((mat[:, :, :3] * 255).astype(np.uint8)).resize((336,336), Image.BICUBIC)
-    mat.putalpha(128)
+    # mat.putalpha(128)
+    mat.putalpha(32)
     img_overlay_attn = img_recover.copy()
     img_overlay_attn.paste(mat, mask=mat)
     
@@ -446,7 +447,8 @@ def plot_text_to_image_analysis(state, layer_idx, boxes, head_idx=1 ):
         img_mask[img_patch[0], img_patch[1]] = 1
     img_mask = cmap(img_mask)
     img_mask = Image.fromarray((img_mask[:, :, :3] * 255 ).astype(np.uint8)).resize((336,336), Image.BICUBIC)
-    img_mask.putalpha(208)
+    # img_mask.putalpha(208)
+    img_mask.putalpha(32)
     img_patch_recovered = img_recover.copy()
     img_patch_recovered.paste(img_mask, mask=img_mask)
     img_patch_recovered
