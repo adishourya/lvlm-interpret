@@ -161,21 +161,32 @@ def handle_attentions_i2t(state, highlighted_text, layer_idx=32, token_idx=0):
             img_attn /= img_attn.max()
             img_attn_mean.append(img_attn.mean())
             img_attn_max.append(img_attn.max()) # across all dim
+
         img_attn_list = [x for _, x in sorted(zip(img_attn_mean, img_attn_list), key=lambda pair: pair[0], reverse=True)]
         img_attn_max_list = [x for _, x in sorted(zip(img_attn_max, img_attn_list), key=lambda pair: pair[0], reverse=True)]
-
-        fig,ax = plt.subplot_mosaic("A;B")
-        plt.figure(figsize=(15,8))
-        ax["A"] = seaborn.heatmap([img_attn_mean], 
-            cmap="viridis",linewidths=.3, square=True,annot=True, cbar_kws={"orientation": "vertical", "shrink":0.3}
+        # Create the mosaic layout
+        fig, ax = plt.subplot_mosaic(
+            [["A", "B"]], figsize=(15, 8)  # Define layout and figure size
         )
-        
-        ax["B"] = seaborn.heatmap([img_attn_max], 
-            cmap="viridis",linewidths=.3, square=True,annot=True, cbar_kws={"orientation": "vertical", "shrink":0.3}
-        )
-        ax["B"].set_xlabel('Head number')
-        ax["A"].set_title(f"Mean and Max Attention between the image and the token {[state.output_ids_decoded[tok] for tok in token_idx_list]} for layer {layer_idx+1}")
 
+        # Plot the mean attention heatmap
+        seaborn.heatmap([img_attn_mean], 
+                    cmap="viridis", linewidths=0.3, square=True, annot=True, 
+                    cbar_kws={"orientation": "vertical", "shrink": 0.3}, ax=ax["A"])
+        ax["A"].set_title("Mean Attention")
+
+        # Plot the max attention heatmap
+        seaborn.heatmap([img_attn_max], 
+                    cmap="viridis", linewidths=0.3, square=True, annot=True, 
+                    cbar_kws={"orientation": "vertical", "shrink": 0.3}, ax=ax["B"])
+        ax["B"].set_title("Max Attention")
+        ax["B"].set_xlabel("Head number")
+
+        # Set the overall title
+        fig.suptitle(
+            f"Mean and Max Attention between the image and the token {[state.output_ids_decoded[tok] for tok in token_idx_list]} for layer {layer_idx+1}",
+            fontsize=14
+        )
 
         # fig = plt.figure(figsize=(10, 3))
         # ax = seaborn.heatmap([img_attn_mean], 
