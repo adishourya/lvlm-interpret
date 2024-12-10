@@ -278,8 +278,8 @@ def build_demo(args, embed_mode=False):
             #         ], inputs=[imagebox, textbox])
 
         with gr.Tab("Attention analysis"):
-            with gr.Row():
-                gr.Markdown("_write how to use attention analyis here_")
+
+            gr.Markdown("## write how to use attention analyis here")
             with gr.Row():
                 with gr.Column(scale=3):
                     # attn_ana_layer = gr.Slider(1, 100, step=1, label="Layer")
