@@ -389,6 +389,21 @@ def build_demo(args, embed_mode=False):
             [state, relevancy_token_dropdown],
             [relevancy_txt_gallery, relevancy_highlightedtext]
         )
+        if not embed_mode:
+            gr.Markdown(tos_markdown)
+
+        clear_btn.click( clear_history, None, [state, chatbot, textbox, imagebox, imagebox_recover, generated_text, i2t_attn_gallery ] , queue=False)
+
+        textbox.submit( add_text, [state, textbox, imagebox, image_process_mode], [state, chatbot, textbox, imagebox], queue=False).then(
+        lvlm_bot, [state, temperature, top_p, max_output_tokens], [state, chatbot] ,).then(
+        attn_update_slider, [state], [state, attn_select_layer]).then(
+        [state], [state])
+
+        submit_btn.click( add_text, [state, textbox, imagebox, image_process_mode], [state, chatbot, textbox, imagebox], queue=False).then(
+        lvlm_bot, [state, temperature, top_p, max_output_tokens], [state, chatbot],).then(
+        attn_update_slider, [state], [state, attn_select_layer]).then(
+        [state], [state])
+
 
     return demo
 
