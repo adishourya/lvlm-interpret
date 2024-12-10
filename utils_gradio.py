@@ -44,7 +44,7 @@ title_markdown = ("""
 """)
 
 tos_markdown = ("""
-### Terms of use
+#### Terms of use
 By using this service, users are required to agree to the following terms:
 The service is a research preview intended for non-commercial use only. It only provides limited safety measures and may generate offensive content. It must not be used for any illegal, harmful, violent, racist, or sexual purposes.
 """)
@@ -278,8 +278,6 @@ def build_demo(args, embed_mode=False):
             #         ], inputs=[imagebox, textbox])
 
         with gr.Tab("Attention analysis"):
-
-            gr.Markdown("## write how to use attention analyis here")
             with gr.Row():
                 with gr.Column(scale=3):
                     # attn_ana_layer = gr.Slider(1, 100, step=1, label="Layer")
@@ -299,6 +297,9 @@ def build_demo(args, embed_mode=False):
                 [state, attn_modality_select],
                 [state, attn_ana_plot]
             )
+        gr.Markdown("""
+        ### How To Use Attention Analysis:
+        """)
 
         with gr.Tab("Attentions"):
             with gr.Row():
@@ -360,6 +361,10 @@ def build_demo(args, embed_mode=False):
             [generated_text, imagebox_recover, i2t_attn_gallery, i2t_attn_head_mean_plot]
         )
 
+        gr.Markdown("""
+        ### How To Use Attentions:
+        """)
+
         with gr.Tab("Relevancy"):
             with gr.Row():
                 relevancy_token_dropdown = gr.Dropdown(
@@ -417,27 +422,7 @@ def build_demo(args, embed_mode=False):
             [state],
             [state, attn_select_layer]
         )
-        # .then(
-        #     handle_box_reset, 
-        #     [imagebox_recover,box_states], 
-        #     [imagebox_recover_boxable, box_states]
-        # ).then(
-        #     handle_attentions_i2t,
-        #     [state, generated_text, attn_select_layer],
-        #     [generated_text, imagebox_recover, i2t_attn_gallery, i2t_attn_head_mean_plot]
-        # ).then(
-        #     clear_canvas,
-        #     [],
-        #     [imagebox]
-        # ).then(
-        #     handle_relevancy,
-        #     [state, relevancy_token_dropdown],
-        #     [relevancy_gallery]
-        # ).then(
-        #     handle_text_relevancy,
-        #     [state, relevancy_token_dropdown],
-        #     [relevancy_txt_gallery, relevancy_highlightedtext]
-        # )
+
         submit_btn.click(
             add_text,
             [state, textbox, imagebox, image_process_mode],
@@ -452,28 +437,10 @@ def build_demo(args, embed_mode=False):
             [state],
             [state, attn_select_layer]
         )
-        # .then(
-        #     causality_update_dropdown,
-        #     [state],
-        #     [causality_dropdown]
-        # ).then(
-        #     handle_box_reset, 
-        #     [imagebox_recover,box_states], 
-        #     [imagebox_recover_boxable, box_states]
-        # ).then(
-        #      plot_attention_analysis,
-        #      [state, attn_modality_select],
-        #      [state, attn_ana_plot]
-        # ).then(
-        #     handle_relevancy,
-        #     [state, relevancy_token_dropdown],
-        #     [relevancy_gallery]
-        # ).then(
-        #     handle_text_relevancy,
-        #     [state, relevancy_token_dropdown],
-        #     [relevancy_txt_gallery, relevancy_highlightedtext]
-        # )
-        
+
+        gr.Markdown("""
+        ### How To Use Attentions:
+        """)
 
     return demo
 
