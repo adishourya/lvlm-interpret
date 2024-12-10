@@ -278,6 +278,9 @@ def build_demo(args, embed_mode=False):
             #         ], inputs=[imagebox, textbox])
 
         with gr.Tab("Attention analysis"):
+            gr.Markdown("""
+            ### How To Use Attention Analysis:
+            """)
             with gr.Row():
                 with gr.Column(scale=3):
                     # attn_ana_layer = gr.Slider(1, 100, step=1, label="Layer")
@@ -297,11 +300,11 @@ def build_demo(args, embed_mode=False):
                 [state, attn_modality_select],
                 [state, attn_ana_plot]
             )
-        gr.Markdown("""
-        ### How To Use Attention Analysis:
-        """)
 
         with gr.Tab("Attentions"):
+            gr.Markdown("""
+            ### How To Use Attentions:
+            """)
             with gr.Row():
                 attn_select_layer = gr.Slider(1, N_LAYERS, value=32, step=1, label="Layer")
             with gr.Row():
@@ -361,11 +364,12 @@ def build_demo(args, embed_mode=False):
             [generated_text, imagebox_recover, i2t_attn_gallery, i2t_attn_head_mean_plot]
         )
 
-        gr.Markdown("""
-        ### How To Use Attentions:
-        """)
 
         with gr.Tab("Relevancy"):
+            gr.Markdown("""
+            ### How to Use Relevancy:
+                * Saliency of each generated token on the image 
+                        """)
             with gr.Row():
                 relevancy_token_dropdown = gr.Dropdown(
                     choices=['llama','vit','all'],
@@ -438,9 +442,6 @@ def build_demo(args, embed_mode=False):
             [state, attn_select_layer]
         )
 
-        gr.Markdown("""
-        ### How To Use Attentions:
-        """)
 
     return demo
 
