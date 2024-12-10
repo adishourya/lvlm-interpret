@@ -69,6 +69,7 @@ def attn_update_slider(state):
     fn_attention = state.attention_key + '_attn.pt'
     attentions = torch.load(fn_attention, mmap=True)
     num_layers = len(attentions[0])
+    # is slider the best module for this ? 
     return state, gr.Slider(1, num_layers, value=num_layers, step=1, label="Layer")
 
 
@@ -165,8 +166,8 @@ def handle_attentions_i2t(state, highlighted_text, layer_idx=32, token_idx=0):
             cmap="viridis",linewidths=.3, square=True,annot=True, cbar_kws={"orientation": "vertical", "shrink":0.3}
         )
         ax.set_xlabel('Head number')
-        # ax.set_title(f"Mean Attention between the image and the token {[state.output_ids_decoded[tok] for tok in token_idx_list]} for layer {layer_idx+1}")
-        ax.set_title(f"Mean Attention between the image and the token {[state.output_ids_decoded[tok] for tok in token_idx_list]} for all the layers")
+        ax.set_title(f"Mean Attention between the image and the token {[state.output_ids_decoded[tok] for tok in token_idx_list]} for layer {layer_idx+1}")
+        # ax.set_title(f"Mean Attention between the image and the token {[state.output_ids_decoded[tok] for tok in token_idx_list]} for all the layers")
 
         fig.tight_layout()
 
@@ -393,7 +394,7 @@ def plot_attention_analysis(state, attn_modality_select):
                 heatmap_mean[layer_idx][head_idx] = ques_attn.mean()
     heatmap_mean_df = pd.DataFrame(heatmap_mean)
     fig = plt.figure(figsize=(4, 4)) 
-    ax = seaborn.heatmap(heatmap_mean_df,square=True, cmap="viridis",cbar_kws={"orientation": "vertical"})
+    ax = seaborn.heatmap(heatmap_mean_df,square=True, cmap="viridis",cbar_kws={"orientation": "vertical","shrink":0.3})
     ax.set_xlabel("Layers")
     ax.set_ylabel("Heads")
     ax.set_title(f"{attn_modality_select} Mean Attention")
