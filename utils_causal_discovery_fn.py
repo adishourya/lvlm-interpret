@@ -134,7 +134,8 @@ def show_tokens_on_image(selected_image_tokens, pil_image, weights=None):
     tokens_mask = np.zeros(576)
     for i, tok in enumerate(selected_image_tokens):
         tokens_mask[tok] = weights_n[i]
-    cmap = plt.get_cmap('jet')
+    # cmap = plt.get_cmap('jet')
+    cmap = plt.get_cmap('viridis')
     im_mask = tokens_mask.reshape((24, 24))
     im_mask = cmap(im_mask)
     a_im = Image.fromarray((im_mask[:, :, :3] * 255).astype(np.uint8)).resize((336, 336), Image.BICUBIC)
