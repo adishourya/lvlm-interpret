@@ -35,13 +35,17 @@ def get_processor_model(args):
         )
     else:
         quant_config = None
-
+    
+    # we will try to use eager implementation. flash attn does not support
+    # output_attentions=True
     model = LlavaForConditionalGeneration.from_pretrained(
         args.model_name_or_path, torch_dtype=torch.bfloat16, 
         quantization_config=quant_config, low_cpu_mem_usage=True, device_map="auto",
+        attn_implementation="eager",
         return_dict_in_generate=True,
         output_attentions=True
     )
+    model.vision_tower.config.output_attentions = True
 
     # Relevancy map
     # set hooks to get attention weights
