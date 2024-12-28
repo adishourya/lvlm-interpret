@@ -38,7 +38,9 @@ def get_processor_model(args):
 
     model = LlavaForConditionalGeneration.from_pretrained(
         args.model_name_or_path, torch_dtype=torch.bfloat16, 
-        quantization_config=quant_config, low_cpu_mem_usage=True, device_map="auto"
+        quantization_config=quant_config, low_cpu_mem_usage=True, device_map="auto",
+        return_dict_in_generate=True,
+        output_attentions=True
     )
 
     # Relevancy map

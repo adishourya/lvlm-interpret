@@ -172,10 +172,16 @@ def lvlm_bot(state, temperature, top_p, max_new_tokens):
 
     # Save input_ids and attentions
     fn_input_ids = f'{tempfilename.name}_input_ids.pt'
+    logger.info(f"Input ids saved to {fn_input_ids}")
     torch.save(move_to_device(input_ids, device='cpu'), fn_input_ids)
+
     fn_attention = f'{tempfilename.name}_attn.pt'
     torch.save(move_to_device(outputs.attentions, device='cpu'), fn_attention)
+    logger.info(f"Attention saved to : {fn_attention}")
+
+    fn_output_ids = f'{tempfilename.name}_output_ids.pt'
     logger.info(f"Saved attention to {fn_attention}")
+    torch.save(torch.tensor(output_ids),fn_output_ids)
 
     # Handle relevancy map
     # tokens_for_rel = tokens_for_rel[1:]
