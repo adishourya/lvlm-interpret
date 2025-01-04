@@ -2,6 +2,7 @@ import os
 import tempfile
 import logging
 
+from gradio.external import re
 import torch
 
 from PIL import Image
@@ -14,7 +15,7 @@ from torchvision.transforms.functional import to_pil_image
 from utils_model import get_processor_model, move_to_device, to_gradio_chatbot, process_image
 
 from utils_attn import (
-    handle_attentions_i2t, plot_attention_analysis, handle_relevancy, handle_text_relevancy, reset_tokens,
+    handle_attentions_i2t, plot_attention_analysis, handle_relevancy, handle_text_relevancy, reset_tokens,select_all_tokens,
     plot_text_to_image_analysis, handle_box_reset, boxes_click_handler, attn_update_slider
 )
 
@@ -184,7 +185,11 @@ def lvlm_bot(state, temperature, top_p, max_new_tokens):
     logger.info(f"Saved attention to {fn_attention}")
     torch.save(torch.tensor(output_ids),fn_output_ids)
 
-    # tokens_for_rel = tokens_for_rel[1:]
+    model.enc_attn_weights = []
+    model.enc_attn_weights_vit = []
+    # enc_attn_weights_vit = []
+    # rel_maps = []
+
     # Reconstruct processed image
     img_std = torch.tensor(processor.image_processor.image_std).view(3,1,1)
     img_mean = torch.tensor(processor.image_processor.image_mean).view(3,1,1)
@@ -250,36 +255,33 @@ def build_demo(args, embed_mode=False):
                     with gr.Row(elem_id="buttons") as button_row:
                         clear_btn = gr.Button(value="🗑️  Clear", interactive=True, visible=True)
 
-            # with gr.Row():
-            #     with gr.Column(scale=6):
-                    
-            #         gr.Examples(examples=[
-            #             [f"{CUR_DIR}/examples/extreme_ironing.jpg", "What color is the man's shirt?"],
-            #             [f"{CUR_DIR}/examples/waterview.jpg", "What is in the top left of this image?"],
-            #             [f"{CUR_DIR}/examples/MMVP_34.jpg", "Is the butterfly's abdomen visible in the image?"],
-            #         ], inputs=[imagebox, textbox])
-
-            #     with gr.Column(scale=6):
-            #         gr.Examples(examples=[
-            #             [f"{CUR_DIR}/examples/MMVP_84.jpg", "Is the door of the truck cab open?"],
-            #             [f"{CUR_DIR}/examples/MMVP_173.jpg", "Is the decoration on the Easter egg flat or raised?"],
-            #             [f"{CUR_DIR}/examples/MMVP_279.jpg", "Is the elderly person standing or sitting in the picture?"],
-            #         ], inputs=[imagebox, textbox])
-
-        with gr.Tab("Attention analysis"):
+        with gr.Tab("Image-to-Answer"):
             gr.Markdown("""
             ### How To Use Attention Analysis:
             """)
             with gr.Row():
                 with gr.Column(scale=3):
                     # attn_ana_layer = gr.Slider(1, 100, step=1, label="Layer")
-                    attn_modality_select = gr.Dropdown(
-                            choices=['Image-to-Answer', 'Question-to-Answer'],
-                            value='Image-to-Answer',
-                            interactive=True,
-                            show_label=False,
-                            container=False
-                        )
+                    attn_modality_select = gr.State("Image-to-Answer")
+                    attn_ana_submit = gr.Button(value="Plot attention matrix", interactive=True)
+                with gr.Column(scale=6):
+                    attn_ana_plot = gr.Plot(label="Attention plot")
+
+
+        attn_ana_submit.click(
+                plot_attention_analysis,
+                [state, attn_modality_select],
+                [state, attn_ana_plot]
+            )
+
+        with gr.Tab("Question-to-Answer"):
+            gr.Markdown("""
+            ### How To Use Attention Analysis:
+            """)
+            with gr.Row():
+                with gr.Column(scale=3):
+                    # attn_ana_layer = gr.Slider(1, 100, step=1, label="Layer")
+                    attn_modality_select = gr.State("Question-to-Answer")
                     attn_ana_submit = gr.Button(value="Plot attention matrix", interactive=True)
                 with gr.Column(scale=6):
                     attn_ana_plot = gr.Plot(label="Attention plot")
@@ -297,6 +299,7 @@ def build_demo(args, embed_mode=False):
             with gr.Row():
                 attn_select_layer = gr.Slider(1, N_LAYERS, value=32, step=1, label="Layer")
             with gr.Row():
+                # image box, select tokens ,[reset,plot]
                 with gr.Column(scale=3):
                     imagebox_recover = gr.Image(type="pil", label='Preprocessed image', interactive=False)
 
@@ -307,11 +310,14 @@ def build_demo(args, embed_mode=False):
                         color_map={"label": "green"}
                     )
                     with gr.Row():
+                        select_all = gr.Button(value="Select All Tokens",interactive=True)
                         attn_reset = gr.Button(value="Reset tokens", interactive=True)
                         attn_submit = gr.Button(value="Plot attention", interactive=True)
 
                 with gr.Column(scale=9):
+                    # heatmap for mean attention
                     i2t_attn_head_mean_plot = gr.Plot(label="Image-to-Text attention average per head")
+                    # saliency over heads
                     i2t_attn_gallery = gr.Gallery(type="pil", label='Attention heatmaps', columns=8, interactive=False)
 
             box_states = gr.Dataframe(type="numpy", datatype="bool", row_count=24, col_count=24, visible=False) 
@@ -327,13 +333,22 @@ def build_demo(args, embed_mode=False):
                     t2i_attn_head_mean_plot = gr.Plot(label="Text-to-Image attention average per head")
                     attn_ana_plot_2 = gr.Plot(scale=2, label="Attention plot",container=True)
 
+        
         reset_boxes_btn.click(
             handle_box_reset, 
             [imagebox_recover,box_states], 
             [imagebox_recover_boxable, box_states]
         )
         imagebox_recover_boxable.select(boxes_click_handler, [imagebox_recover,box_states], [imagebox_recover_boxable, box_states])
-        
+
+
+        select_all.click(
+            select_all_tokens,
+            [state],
+            [generated_text]
+        )
+
+                
         attn_reset.click(
             reset_tokens,
             [state],
@@ -352,6 +367,7 @@ def build_demo(args, embed_mode=False):
             [state, generated_text, attn_select_layer],
             [generated_text, imagebox_recover, i2t_attn_gallery, i2t_attn_head_mean_plot]
         )
+
 
 
         if not embed_mode:

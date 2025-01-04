@@ -504,4 +504,12 @@ def reset_tokens(state):
         generated_text.extend([(text, None), (' ', None)])
 
     return generated_text
-    
+
+
+
+def select_all_tokens(state):
+    selected_tokens = []
+    for text in state.output_ids_decoded:
+        selected_tokens.extend([(text, True), (' ', True)])
+    # print(selected_tokens)
+    return selected_tokens
