@@ -129,49 +129,62 @@ def handle_attentions_i2t(state, highlighted_text, layer_idx=32, token_idx=0):
         batch_size, num_heads, inp_seq_len, seq_len = attentions[0][0].shape
         # cmap = plt.get_cmap('jet')
         cmap = plt.get_cmap('viridis')
+        num_layers = len(attentions[0])
+        
+        img_attn_list_dict = dict()
+        img_attn_mean_dict = dict()
+        for layer_idx in range(num_layers):
+            img_attn_list = []
+            img_attn_mean = []
+            for head_idx in range(num_heads):
+                img_attn = None
+                for token_idx in token_idx_list:
+                    if token_idx >= len(attentions):
+                        logger.info(f'token index {token_idx} out of bounds')
+                        continue
+                    mh_attention = attentions[token_idx][layer_idx]
+                    batch_size, num_heads, inp_seq_len, seq_len = mh_attention.shape
+                    if inp_seq_len > 1:
+                        mh_attention = mh_attention[:,:,-1,:]
+                    mh_attention = mh_attention.squeeze()
+                    img_attn_token = mh_attention[head_idx, img_idx:img_idx+576].reshape(24,24).float().cpu().numpy()
 
-        img_attn_list = []
-        img_attn_mean = []
-        for head_idx in range(num_heads):
-            img_attn = None
-            for token_idx in token_idx_list:
-                if token_idx >= len(attentions):
-                    logger.info(f'token index {token_idx} out of bounds')
-                    continue
-                mh_attention = attentions[token_idx][layer_idx]
-                batch_size, num_heads, inp_seq_len, seq_len = mh_attention.shape
-                if inp_seq_len > 1:
-                    mh_attention = mh_attention[:,:,-1,:]
-                mh_attention = mh_attention.squeeze()
-                img_attn_token = mh_attention[head_idx, img_idx:img_idx+576].reshape(24,24).float().cpu().numpy()
+                    if img_attn is None:
+                        img_attn = img_attn_token
+                    else:
+                        img_attn += img_attn_token
+                img_attn /= len(token_idx_list)
+                img_overlay_attn = draw_heatmap_on_image(img_attn, recovered_image)
 
-                if img_attn is None:
-                    img_attn = img_attn_token
-                else:
-                    img_attn += img_attn_token
-            img_attn /= len(token_idx_list)
-            img_overlay_attn = draw_heatmap_on_image(img_attn, recovered_image)
+                img_attn_list.append((img_overlay_attn, f'Layer_{layer_idx}_Head_{head_idx}'))
 
-            img_attn_list.append((img_overlay_attn, f'Head_{head_idx}'))
+                # Calculate mean attention per head
+                # img_attn = mh_attention[head_idx, img_idx:img_idx+576].reshape(24,24).cpu().numpy()
 
-            # Calculate mean attention per head
-            # img_attn = mh_attention[head_idx, img_idx:img_idx+576].reshape(24,24).cpu().numpy()
+                img_attn /= img_attn.max()
+                img_attn_mean.append(img_attn.mean())
+            img_attn_list = [x for _, x in sorted(zip(img_attn_mean, img_attn_list), key=lambda pair: pair[0], reverse=True)]
+            img_attn_list_dict[layer_idx] = img_attn_list
+            img_attn_mean_dict[layer_idx] = img_attn_mean
+            logger.info(f"Calculated for layer: {layer_idx}")
 
-            img_attn /= img_attn.max()
-            img_attn_mean.append(img_attn.mean())
-        img_attn_list = [x for _, x in sorted(zip(img_attn_mean, img_attn_list), key=lambda pair: pair[0], reverse=True)]
 
-        fig = plt.figure(figsize=(10, 3))
-        ax = seaborn.heatmap([img_attn_mean], 
-            cmap="viridis",linewidths=.3, square=True,annot=True, cbar_kws={"orientation": "vertical", "shrink":0.3}
-        )
-        ax.set_xlabel('Head number')
-        ax.set_title(f"Mean Attention between the image and the token {[state.output_ids_decoded[tok] for tok in token_idx_list]} for layer {layer_idx+1}")
-        # ax.set_title(f"Mean Attention between the image and the token {[state.output_ids_decoded[tok] for tok in token_idx_list]} for all the layers")
-
+        fig, ax = plt.subplots(num_layers,1,figsize=(15,2*num_layers))
+        for layer_id in range(num_layers):
+                seaborn.heatmap([img_attn_mean_dict[layer_id]], 
+                    cmap="viridis",linewidths=.3,annot=True,
+                    cbar_kws={"orientation": "vertical", "shrink":0.3},
+                    ax=ax[layer_id]
+                )
+                ax[layer_id].set_ylabel(f'Layer "{layer_id}')
         fig.tight_layout()
+        fig.suptitle("Mean (per layer) scores for all layers ")
 
-    return generated_text, recovered_image, img_attn_list, fig
+        all_attn_list = [item for sublist in img_attn_list_dict.values() for item in sublist]
+        logger.info(f"length attention images: {len(all_attn_list)}")
+        logger.info(f"Mean Attention between the image and the token {[state.output_ids_decoded[tok] for tok in token_idx_list]}")
+
+    return generated_text, recovered_image, all_attn_list[::-1], fig
 
 def handle_relevancy(state, type_selector,incude_text_relevancy=False):
     incude_text_relevancy = True

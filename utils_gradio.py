@@ -46,8 +46,11 @@ title_markdown = ("""
 
 tos_markdown = ("""
 #### Terms of use
+A Fork mainted for : *todo*
+-----
 By using this service, users are required to agree to the following terms:
 The service is a research preview intended for non-commercial use only. It only provides limited safety measures and may generate offensive content. It must not be used for any illegal, harmful, violent, racist, or sexual purposes.
+    -- Developed by : chang and me
 """)
 
 block_css = """
