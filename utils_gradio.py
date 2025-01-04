@@ -184,25 +184,7 @@ def lvlm_bot(state, temperature, top_p, max_new_tokens):
     logger.info(f"Saved attention to {fn_attention}")
     torch.save(torch.tensor(output_ids),fn_output_ids)
 
-    # Handle relevancy map
     # tokens_for_rel = tokens_for_rel[1:]
-    word_rel_map = construct_relevancy_map(
-        tokenizer=processor.tokenizer, 
-        model=model,
-        input_ids=inputs.input_ids,
-        tokens=generated_text_tokenized, 
-        outputs=outputs, 
-        output_ids=output_ids,
-        img_idx=img_idx
-    )
-    fn_relevancy = f'{tempfilename.name}_relevancy.pt'
-    torch.save(move_to_device(word_rel_map, device='cpu'), fn_relevancy)
-    logger.info(f"Saved relevancy map to {fn_relevancy}")
-    model.enc_attn_weights = []
-    model.enc_attn_weights_vit = []
-    # enc_attn_weights_vit = []
-    # rel_maps = []
-
     # Reconstruct processed image
     img_std = torch.tensor(processor.image_processor.image_std).view(3,1,1)
     img_mean = torch.tensor(processor.image_processor.image_mean).view(3,1,1)
@@ -369,43 +351,6 @@ def build_demo(args, embed_mode=False):
             handle_attentions_i2t,
             [state, generated_text, attn_select_layer],
             [generated_text, imagebox_recover, i2t_attn_gallery, i2t_attn_head_mean_plot]
-        )
-
-
-        with gr.Tab("Relevancy"):
-            gr.Markdown("""
-            ### How to Use Relevancy:
-                * Saliency of each generated token on the image 
-                        """)
-            with gr.Row():
-                relevancy_token_dropdown = gr.Dropdown(
-                    choices=['llama','vit','all'],
-                    value='llama',
-                    interactive=True,
-                    show_label=False,
-                    container=False
-                )
-                relevancy_submit = gr.Button(value="Plot relevancy", interactive=True)
-            with gr.Row():
-                relevancy_gallery = gr.Gallery(type="pil", label='Input image relevancy heatmaps', columns=8, interactive=False)
-            with gr.Row():
-                relevancy_txt_gallery = gr.Gallery(type="pil", label='Image-text relevancy comparison', columns=8, interactive=False)
-                #gr.Plot(label='Input text Relevancy heatmaps') 
-            with gr.Row():
-                relevancy_highlightedtext = gr.HighlightedText(
-                        label='Tokens with high relevancy to image'
-                    )
-
-        relevancy_submit.click(
-            lambda state, relevancy_token_dropdown: handle_relevancy(state, relevancy_token_dropdown, incude_text_relevancy=True),
-            #handle_relevancy,
-            [state, relevancy_token_dropdown],
-            [relevancy_gallery],
-        )
-        relevancy_submit.click(
-            handle_text_relevancy,
-            [state, relevancy_token_dropdown],
-            [relevancy_txt_gallery, relevancy_highlightedtext]
         )
 
 
