@@ -224,7 +224,7 @@ def build_demo(args, embed_mode=False):
         ROLE1 = 'model'
 
     textbox = gr.Textbox(show_label=False, placeholder="Enter text and press ENTER", container=False)
-    with gr.Blocks(title="LVLM-Interpret", theme=gr.themes.Default(), css=block_css) as demo:
+    with gr.Blocks(title="Sailency Inspector Experimental", theme=gr.themes.Default(), css=block_css) as demo:
         state = gr.State()
 
         if not embed_mode:
@@ -297,29 +297,36 @@ def build_demo(args, embed_mode=False):
             ### How To Use Attentions:
             """)
             with gr.Row():
-                attn_select_layer = gr.Slider(1, N_LAYERS, value=32, step=1, label="Layer")
-            with gr.Row():
                 # image box, select tokens ,[reset,plot]
                 with gr.Column(scale=3):
+                    # thumbnail input image
                     imagebox_recover = gr.Image(type="pil", label='Preprocessed image', interactive=False)
-
+                    
+                    # box to select tokens to backprop from
                     generated_text = gr.HighlightedText(
                         label="Generated text (tokenized)",
                         combine_adjacent=False,
                         interactive=True,
                         color_map={"label": "green"}
                     )
+
+                    # buttons to interact with generated text
                     with gr.Row():
                         select_all = gr.Button(value="Select All Tokens",interactive=True)
                         attn_reset = gr.Button(value="Reset tokens", interactive=True)
                         attn_submit = gr.Button(value="Plot attention", interactive=True)
 
                 with gr.Column(scale=9):
-                    # heatmap for mean attention
+                    # heatmap for mean attention across all layers
                     i2t_attn_head_mean_plot = gr.Plot(label="Image-to-Text attention average per head")
-                    # saliency over heads
+                    # saliency over all heads and all layers
                     i2t_attn_gallery = gr.Gallery(type="pil", label='Attention heatmaps', columns=8, interactive=False)
 
+        with gr.Tab("Patch to Head"):
+            with gr.Row():
+                # we probably dont need this now!
+                attn_select_layer = gr.Slider(1, N_LAYERS, value=32, step=1, label="Layer")
+            # patch selector box
             box_states = gr.Dataframe(type="numpy", datatype="bool", row_count=24, col_count=24, visible=False) 
             with gr.Row(equal_height=True):
                 with gr.Column(scale=3):

@@ -170,6 +170,7 @@ def handle_attentions_i2t(state, highlighted_text, layer_idx=32, token_idx=0):
 
 
         fig, ax = plt.subplots(num_layers,1,figsize=(15,2*num_layers))
+        fig.suptitle("Mean (per layer) scores for all layers ")
         for layer_id in range(num_layers):
                 seaborn.heatmap([img_attn_mean_dict[layer_id]], 
                     cmap="viridis",linewidths=.3,annot=True,
@@ -178,7 +179,6 @@ def handle_attentions_i2t(state, highlighted_text, layer_idx=32, token_idx=0):
                 )
                 ax[layer_id].set_ylabel(f'Layer "{layer_id}')
         fig.tight_layout()
-        fig.suptitle("Mean (per layer) scores for all layers ")
 
         all_attn_list = [item for sublist in img_attn_list_dict.values() for item in sublist]
         logger.info(f"length attention images: {len(all_attn_list)}")
