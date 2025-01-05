@@ -233,10 +233,7 @@ def build_demo(args, embed_mode=False):
         with gr.Tab("Generation"):
             with gr.Row():
                 with gr.Column(scale=6):
-                    
-                    imagebox = gr.ImageEditor(type="pil", height=400, elem_id="image_canvas")
-                    
-
+                    imagebox = gr.ImageEditor(type="pil", height=400, elem_id="image_canvas",eraser=True,brush=True)
                     with gr.Accordion("Parameters", open=False) as parameter_row:
                         image_process_mode = gr.Radio(
                             ["Crop", "Resize", "Pad", "Default"],
