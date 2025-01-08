@@ -20,7 +20,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 # cmap = plt.get_cmap('jet')
-cmap = plt.get_cmap('viridis')
+cmap = plt.get_cmap('coolwarm')
 separators_list = ['.',',','?','!', ':', ';', '</s>', '/', '!', '(', ')', '[', ']', '{', '}', '<', '>', '|', '\\', '-', '_', '+', '=', '*', '&', '^', '%', '$', '#', '@', '!', '~', '`', ' ', '\t', '\n', '\r', '\x0b', '\x0c']
 
 def move_to_device(input, device='cpu'):
@@ -73,18 +73,19 @@ def attn_update_slider(state):
     return state, gr.Slider(1, num_layers, value=num_layers, step=1, label="Layer")
 
 
-def handle_attentions_i2t(state, highlighted_text, layer_idx=32, token_idx=0):
+def handle_attentions_i2t(state, highlighted_text,token_idx=0):
     '''
         Draw attention heatmaps and return as a list of PIL images
     '''
 
     if not hasattr(state, 'attention_key'):
         return None, None, [], None
-    layer_idx -= 1 
     fn_attention = state.attention_key + '_attn.pt'
     recovered_image = state.recovered_image
     img_idx = state.image_idx
-
+    logger.info(f"image idx: {img_idx}") # 5?
+    
+    # which tokens to backprop from -> token_idx_list
     if highlighted_text is not None:
         generated_text = state.output_ids_decoded
         token_idx_map = dict((t,i) for i,t in enumerate(generated_text))
@@ -113,7 +114,6 @@ def handle_attentions_i2t(state, highlighted_text, layer_idx=32, token_idx=0):
             generated_text.extend([(data['token'], None if data['class_or_confidence'] is None else "'"), (' ', None)])
     else:
         token_idx_list = [0]
-
         generated_text = []
         for text in state.output_ids_decoded:
             generated_text.extend([(text, None), (' ', None)])
@@ -127,12 +127,12 @@ def handle_attentions_i2t(state, highlighted_text, layer_idx=32, token_idx=0):
         if len(attentions) == len(state.output_ids_decoded):
             gr.Error('Mismatch between lengths of attentions and output tokens')
         batch_size, num_heads, inp_seq_len, seq_len = attentions[0][0].shape
-        # cmap = plt.get_cmap('jet')
-        cmap = plt.get_cmap('viridis')
         num_layers = len(attentions[0])
+        # cmap = plt.get_cmap('jet')
+        cmap = plt.get_cmap('coolwarm')
         
-        img_attn_list_dict = dict()
-        img_attn_mean_dict = dict()
+        img_attn_layers = dict()
+        img_attn_mean_layers = dict()
         for layer_idx in range(num_layers):
             img_attn_list = []
             img_attn_mean = []
@@ -145,8 +145,11 @@ def handle_attentions_i2t(state, highlighted_text, layer_idx=32, token_idx=0):
                     mh_attention = attentions[token_idx][layer_idx]
                     batch_size, num_heads, inp_seq_len, seq_len = mh_attention.shape
                     if inp_seq_len > 1:
+                        # autoregressive. that is regress from first output token
                         mh_attention = mh_attention[:,:,-1,:]
-                    mh_attention = mh_attention.squeeze()
+
+                    # else : multihead attention (interaction image and question)
+                    mh_attention = mh_attention.squeeze() # take out the batch dimension (here always 1)
                     img_attn_token = mh_attention[head_idx, img_idx:img_idx+576].reshape(24,24).float().cpu().numpy()
 
                     if img_attn is None:
@@ -164,23 +167,23 @@ def handle_attentions_i2t(state, highlighted_text, layer_idx=32, token_idx=0):
                 img_attn /= img_attn.max()
                 img_attn_mean.append(img_attn.mean())
             img_attn_list = [x for _, x in sorted(zip(img_attn_mean, img_attn_list), key=lambda pair: pair[0], reverse=True)]
-            img_attn_list_dict[layer_idx] = img_attn_list
-            img_attn_mean_dict[layer_idx] = img_attn_mean
+            img_attn_layers[layer_idx] = img_attn_list
+            img_attn_mean_layers[layer_idx] = img_attn_mean
             logger.info(f"Calculated for layer: {layer_idx}")
 
 
         fig, ax = plt.subplots(num_layers,1,figsize=(15,2*num_layers))
-        fig.suptitle("Mean (per layer) scores for all layers ")
+        fig.suptitle("Mean (per layer) scores for all layers ",fontsize=15,y=0,x=0)
         for layer_id in range(num_layers):
-                seaborn.heatmap([img_attn_mean_dict[layer_id]], 
-                    cmap="viridis",linewidths=.3,annot=True,
+                seaborn.heatmap([img_attn_mean_layers[layer_id]], 
+                    cmap="coolwarm",linewidths=.3,annot=True,
                     cbar_kws={"orientation": "vertical", "shrink":0.3},
                     ax=ax[layer_id]
                 )
                 ax[layer_id].set_ylabel(f'Layer "{layer_id}')
         fig.tight_layout()
 
-        all_attn_list = [item for sublist in img_attn_list_dict.values() for item in sublist]
+        all_attn_list = [item for sublist in img_attn_layers.values() for item in sublist]
         logger.info(f"length attention images: {len(all_attn_list)}")
         logger.info(f"Mean Attention between the image and the token {[state.output_ids_decoded[tok] for tok in token_idx_list]}")
 
@@ -196,6 +199,7 @@ def handle_relevancy(state, type_selector,incude_text_relevancy=False):
     fn_attention = state.attention_key + '_relevancy.pt'
     recovered_image = state.recovered_image
     img_idx = state.image_idx
+    logger.info(f"Image Idx:{img_idx}")
 
     word_rel_maps = torch.load(fn_attention)
     if type_selector not in word_rel_maps:
@@ -364,9 +368,17 @@ def boxes_click_handler(image, box_grid, event: gr.SelectData):
             return image,box_grid
 
 def plot_attention_analysis(state, attn_modality_select):
+    """
+    Img to response
+    steps:
+        1. get attention
+        2. for each layer and for each head:
+
+    """
     fn_attention = state.attention_key + '_attn.pt'
     recovered_image = state.recovered_image
     img_idx = state.image_idx
+    logger.info(f"From Plot attention analysis {img_idx=}")
 
     if os.path.exists(fn_attention):
         attentions = torch.load(fn_attention)
@@ -376,6 +388,7 @@ def plot_attention_analysis(state, attn_modality_select):
         
         num_tokens = len(attentions)
         num_layers = len(attentions[0])
+        # first tokens last mh attention
         last_mh_attention = attentions[0][-1]
         batch_size, num_heads, inp_seq_len, seq_len = attentions[0][0].shape
         generated_text = state.output_ids_decoded
@@ -387,9 +400,9 @@ def plot_attention_analysis(state, attn_modality_select):
     heatmap_mean = defaultdict(dict)
     if attn_modality_select == "Image-to-Answer":
         for layer_idx in range(1,num_layers):
+            mh_attentions = [attentions[i][layer_idx][:,:,-1,:].squeeze() for i in range(len(generated_text))]
             for head_idx in range(num_heads):
-                mh_attentions = []
-                mh_attentions = [attentions[i][layer_idx][:,:,-1,:].squeeze() for i in range(len(generated_text))]
+                # mh_attentions = []
                 img_attn = torch.stack([mh_attention[head_idx, img_idx:img_idx+576].reshape(24,24) for mh_attention in mh_attentions]).float().cpu().numpy()
                 # img_attn /= img_attn.max()
                 heatmap_mean[layer_idx][head_idx] =  img_attn.mean() # img_attn.mean((1,2))
@@ -407,7 +420,7 @@ def plot_attention_analysis(state, attn_modality_select):
                 heatmap_mean[layer_idx][head_idx] = ques_attn.mean()
     heatmap_mean_df = pd.DataFrame(heatmap_mean)
     fig = plt.figure(figsize=(4, 4)) 
-    ax = seaborn.heatmap(heatmap_mean_df,square=True, cmap="viridis",cbar_kws={"orientation": "vertical","shrink":0.3})
+    ax = seaborn.heatmap(heatmap_mean_df,square=True, cmap="coolwarm",cbar_kws={"orientation": "vertical","shrink":0.3})
     ax.set_xlabel("Layers")
     ax.set_ylabel("Heads")
     ax.set_title(f"{attn_modality_select} Mean Attention")
@@ -458,7 +471,7 @@ def plot_text_to_image_analysis(state, layer_idx, boxes, head_idx=1 ):
     for img_patch in img_patches:
         img_mask[img_patch[0], img_patch[1]] = 1
     img_mask = cmap(img_mask)
-    img_mask = Image.fromarray((img_mask[:, :, :3] * 255 ).astype(np.uint8)).resize((336,336), Image.BICUBIC)
+    img_mask = Image.fromarray((img_mask[:, :, :3] * 255).astype(np.uint8)).resize((336, 336), Image.BICUBIC)
     img_mask.putalpha(208)
     img_patch_recovered = img_recover.copy()
     img_patch_recovered.paste(img_mask, mask=img_mask)
@@ -478,7 +491,7 @@ def plot_text_to_image_analysis(state, layer_idx, boxes, head_idx=1 ):
 
     for word, value in zip(words, normalized_values):
         # color = plt.get_cmap("coolwarm")(value)
-        color = plt.get_cmap("viridis")(value)
+        color = plt.get_cmap("coolwarm")(value)
         color = to_rgba(color, alpha=0.6) 
         ax_words.text(x_position, 0.5, word, color=color, fontsize=14, ha='left', va='center')
         x_position += 0.10 
@@ -486,9 +499,9 @@ def plot_text_to_image_analysis(state, layer_idx, boxes, head_idx=1 ):
     cax = fig.add_axes([0.1, 0.15, 0.8, 0.03])  
     norm = plt.Normalize(min(normalized_values), max(normalized_values))
     # sm = plt.cm.ScalarMappable(cmap="coolwarm", norm=norm)
-    sm = plt.cm.ScalarMappable(cmap="viridis", norm=norm)
+    sm = plt.cm.ScalarMappable(cmap="coolwarm", norm=norm)
     sm.set_array([]) 
-    cb = fig.colorbar(sm, cax=cax, orientation='vertical')
+    cb = fig.colorbar(sm, cax=cax, orientation='horizontal')
     cb.set_label('Color Legend', labelpad=10, loc="center")
 
     ax_words.axis('off')
@@ -503,7 +516,7 @@ def plot_text_to_image_analysis(state, layer_idx, boxes, head_idx=1 ):
     
     fig2 = plt.figure(figsize=(10, 3))
     ax2 = seaborn.heatmap([attn_image_patch], 
-        linewidths=.3,annot=True, cmap="viridis",square=True, cbar_kws={"orientation": "vertical", "shrink":0.3}
+        linewidths=.3,annot=True, cmap="coolwarm",square=True, cbar_kws={"orientation": "horizontal", "shrink":0.3}
     )
     ax2.set_xlabel('Head number')
     ax2.set_title(f"Mean Head Attention between the image patches selected and the answer for layer {layer_idx+1}")
