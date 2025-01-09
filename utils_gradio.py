@@ -309,7 +309,7 @@ def build_demo(args, embed_mode=False):
                 attn_modality_select = gr.State("Question-to-Answer")
                 attn_ana_submit = gr.Button(value="Plot attention matrix", interactive=True)
             with gr.Row():
-                raw_mean_plot = gr.Plot(label="Pre Mean (only collapse mean token)")
+                raw_mean_plot = gr.Plot(label="Max Normalized Mean")
 
         attn_ana_submit.click(
                 plot_attention_analysis,

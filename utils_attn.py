@@ -434,7 +434,7 @@ def plot_attention_analysis(state, attn_modality_select):
                 raw_heatmap[layer_idx][head_idx]= ques_attn.mean()
 
     logger.info(f"raw : {raw_heatmap[0][0].shape}")
-    logger.info(f"raw : {raw_heatmap}")
+    # logger.info(f"raw : {raw_heatmap}")
     heatmap_mean_df = pd.DataFrame(heatmap_mean)
     logger.info(f"dataframe shape : {heatmap_mean_df.shape}")
 
@@ -445,11 +445,17 @@ def plot_attention_analysis(state, attn_modality_select):
     ax.set_title(f"{attn_modality_select} Mean Attention")
 
     if attn_modality_select == "Image-to-Answer":
-        fig2,ax2 = plt.subplots(nrows=num_layers, ncols=num_heads, figsize=(num_layers,num_heads))
-        for i in range(num_layers):
-            for j in range(num_heads):
-                ax2[i][j].imshow(raw_heatmap[i][j],cmap="coolwarm")
+        fig2,ax2 = plt.subplots(nrows=num_heads, ncols=num_layers, figsize=(num_layers,num_heads))
+        for i in range(num_heads):
+            for j in range(num_layers):
+                ax2[i][j].imshow(raw_heatmap[j][i],cmap="coolwarm")
                 ax2[i][j].axis("off")
+
+        # Add labels for x-axis (layers) and y-axis (heads)
+        for j in range(num_layers):
+            ax2[0][j].set_title(f"Layer {j}", fontsize=10)  # Add titles to the top of each column
+        for i in range(num_heads):
+            ax2[i][0].set_ylabel(f"Head {i}", fontsize=10, rotation=0, labelpad=30, ha='right')  # Add labels to the first column
     elif attn_modality_select == "Question-to-Answer":
         raw_normalized_df = pd.DataFrame(raw_heatmap)
         fig2 = plt.figure(figsize=(num_layers,num_heads)) 
