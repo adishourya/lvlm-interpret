@@ -281,12 +281,14 @@ def build_demo(args, embed_mode=False):
                 # attn_ana_layer = gr.Slider(1, 100, step=1, label="Layer")
                 attn_modality_select = gr.State("Image-to-Answer")
                 attn_ana_submit = gr.Button(value="Plot attention matrix", interactive=True)
+            with gr.Row():
+                raw_mean_plot = gr.Plot(label="Pre Mean (only collapse mean token)")
 
 
         attn_ana_submit.click(
                 plot_attention_analysis,
                 [state, attn_modality_select],
-                [state, attn_ana_plot]
+                [state, attn_ana_plot, raw_mean_plot]
             )
 
         with gr.Tab("Mean Token Question-to-Answer"):
@@ -306,11 +308,13 @@ def build_demo(args, embed_mode=False):
                 # attn_ana_layer = gr.Slider(1, 100, step=1, label="Layer")
                 attn_modality_select = gr.State("Question-to-Answer")
                 attn_ana_submit = gr.Button(value="Plot attention matrix", interactive=True)
+            with gr.Row():
+                raw_mean_plot = gr.Plot(label="Pre Mean (only collapse mean token)")
 
         attn_ana_submit.click(
                 plot_attention_analysis,
                 [state, attn_modality_select],
-                [state, attn_ana_plot]
+                [state, attn_ana_plot,raw_mean_plot]
             )
 
         with gr.Tab("Raw Attentions"):

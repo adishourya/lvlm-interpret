@@ -432,7 +432,6 @@ def plot_attention_analysis(state, attn_modality_select):
                 # ques_attn /= ques_attn.max()
                 heatmap_mean[layer_idx][head_idx] = ques_attn.mean()
 
-    logger.info(f"raw : {raw_heatmap}")
     logger.info(f"raw : {raw_heatmap[0][0].shape}")
     heatmap_mean_df = pd.DataFrame(heatmap_mean)
     logger.info(f"dataframe shape : {heatmap_mean_df.shape}")
@@ -443,8 +442,18 @@ def plot_attention_analysis(state, attn_modality_select):
     ax.set_ylabel("Heads")
     ax.set_title(f"{attn_modality_select} Mean Attention")
 
+
+    fig2,ax = plt.subplots(nrows=num_layers, ncols=num_heads, figsize=(num_layers,num_heads))
+    for i in range(num_layers):
+        for j in range(num_heads):
+            ax[i][j].imshow(raw_heatmap[i][j],cmap="coolwarm")
+            ax[i][j].axis("off")
+    fig2.savefig("image2text.png")
+
     fig.tight_layout()
-    return state, fig
+    fig2.tight_layout()
+
+    return state, fig,fig2
 
 def plot_text_to_image_analysis(state, layer_idx, boxes, head_idx=1 ):
 
