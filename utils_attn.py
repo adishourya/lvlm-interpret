@@ -429,10 +429,12 @@ def plot_attention_analysis(state, attn_modality_select):
                 mh_attentions = []
                 mh_attentions = [attentions[i][layer_idx][:,:,-1,:].squeeze() for i in range(len(generated_text))]
                 ques_attn = torch.stack([mh_attention[head_idx, img_idx+576:img_idx+576+len_question_only] for mh_attention in mh_attentions]).float().cpu().numpy()
-                # ques_attn /= ques_attn.max()
                 heatmap_mean[layer_idx][head_idx] = ques_attn.mean()
+                ques_attn /= ques_attn.max()
+                raw_heatmap[layer_idx][head_idx]= ques_attn.mean()
 
     logger.info(f"raw : {raw_heatmap[0][0].shape}")
+    logger.info(f"raw : {raw_heatmap}")
     heatmap_mean_df = pd.DataFrame(heatmap_mean)
     logger.info(f"dataframe shape : {heatmap_mean_df.shape}")
 
@@ -442,13 +444,20 @@ def plot_attention_analysis(state, attn_modality_select):
     ax.set_ylabel("Heads")
     ax.set_title(f"{attn_modality_select} Mean Attention")
 
+    if attn_modality_select == "Image-to-Answer":
+        fig2,ax2 = plt.subplots(nrows=num_layers, ncols=num_heads, figsize=(num_layers,num_heads))
+        for i in range(num_layers):
+            for j in range(num_heads):
+                ax2[i][j].imshow(raw_heatmap[i][j],cmap="coolwarm")
+                ax2[i][j].axis("off")
+    elif attn_modality_select == "Question-to-Answer":
+        raw_normalized_df = pd.DataFrame(raw_heatmap)
+        fig2 = plt.figure(figsize=(num_layers,num_heads)) 
+        ax = seaborn.heatmap(raw_normalized_df,square=True,annot=True, cmap="coolwarm",cbar_kws={"orientation": "vertical","shrink":0.3})
+        ax.set_xlabel("Layers")
+        ax.set_ylabel("Heads")
+        ax.set_title(f"{attn_modality_select} Max Normalized mean Attention")
 
-    fig2,ax = plt.subplots(nrows=num_layers, ncols=num_heads, figsize=(num_layers,num_heads))
-    for i in range(num_layers):
-        for j in range(num_heads):
-            ax[i][j].imshow(raw_heatmap[i][j],cmap="coolwarm")
-            ax[i][j].axis("off")
-    fig2.savefig("image2text.png")
 
     fig.tight_layout()
     fig2.tight_layout()
