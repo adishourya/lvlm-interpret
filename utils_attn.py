@@ -369,11 +369,22 @@ def boxes_click_handler(image, box_grid, event: gr.SelectData):
 
 def plot_attention_analysis(state, attn_modality_select):
     """
-    Img to response
+    Img to response tokens
     steps:
-        1. get attention
-        2. for each layer and for each head:
+        for each layer:
+            collect last query for all tokens
+            (token =0 we collect query from last patch)
+            and (token>1 is q=1).The shape of the keys would be num_heads ,
+            # here multihead attention from all the tokens would be of the shape:
+            #+ (img_idx+img_patches+input_ids: ___ + (0.. total_out_tokens-1))
+            for each head:
+                stack keys only ranging the image patches
+                store mean of keys across all tokens
 
+    Question tokens to response tokens:
+        similar to above :
+            but here we skip image tokens and only collect :
+            mh_attns[img_idx+576:img_idx+576+len(question_tokens)]
     """
     fn_attention = state.attention_key + '_attn.pt'
     recovered_image = state.recovered_image
@@ -419,8 +430,8 @@ def plot_attention_analysis(state, attn_modality_select):
                 # ques_attn /= ques_attn.max()
                 heatmap_mean[layer_idx][head_idx] = ques_attn.mean()
     heatmap_mean_df = pd.DataFrame(heatmap_mean)
-    fig = plt.figure(figsize=(4, 4)) 
-    ax = seaborn.heatmap(heatmap_mean_df,square=True, cmap="coolwarm",cbar_kws={"orientation": "vertical","shrink":0.3})
+    fig = plt.figure(figsize=(num_layers,num_heads)) 
+    ax = seaborn.heatmap(heatmap_mean_df,square=True,annot=True, cmap="coolwarm",cbar_kws={"orientation": "vertical","shrink":0.3})
     ax.set_xlabel("Layers")
     ax.set_ylabel("Heads")
     ax.set_title(f"{attn_modality_select} Mean Attention")

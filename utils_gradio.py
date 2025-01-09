@@ -50,7 +50,8 @@ A Fork mainted for : *todo*
 -----
 By using this service, users are required to agree to the following terms:
 The service is a research preview intended for non-commercial use only. It only provides limited safety measures and may generate offensive content. It must not be used for any illegal, harmful, violent, racist, or sexual purposes.
-    -- Developed by : chang and me
+
+    ##### -- Developed and Maintaned by : chang and me
 """)
 
 block_css = """
@@ -255,17 +256,31 @@ def build_demo(args, embed_mode=False):
                     with gr.Row(elem_id="buttons") as button_row:
                         clear_btn = gr.Button(value="🗑️  Clear", interactive=True, visible=True)
 
-        with gr.Tab("Image-to-Answer"):
+        with gr.Tab("Mean Token Image-to-Answer"):
             gr.Markdown("""
-            ### How To Use Attention Analysis:
+            ### How To Interpret:
+            ```
+            * Mean (All output tokens) Influence of image patches to llm response.
+            Img to response tokens
+            steps:
+                for each layer:
+                    collect last query for all tokens
+                    (token =0 we collect query from last patch)
+                    and (token>1 is q=1).The shape of the keys would be num_heads ,
+                    # here multihead attention from all the tokens would be of the shape:
+                    #+ (img_idx+img_patches+input_ids: ___ + (0.. total_out_tokens-1))
+                    for each head:
+                        stack keys only ranging the image patches
+                        store mean of keys across all tokens
+            ```
+
             """)
             with gr.Row():
-                with gr.Column(scale=3):
-                    # attn_ana_layer = gr.Slider(1, 100, step=1, label="Layer")
-                    attn_modality_select = gr.State("Image-to-Answer")
-                    attn_ana_submit = gr.Button(value="Plot attention matrix", interactive=True)
-                with gr.Column(scale=6):
-                    attn_ana_plot = gr.Plot(label="Attention plot")
+                attn_ana_plot = gr.Plot(label="Attention plot")
+            with gr.Row():
+                # attn_ana_layer = gr.Slider(1, 100, step=1, label="Layer")
+                attn_modality_select = gr.State("Image-to-Answer")
+                attn_ana_submit = gr.Button(value="Plot attention matrix", interactive=True)
 
 
         attn_ana_submit.click(
@@ -274,17 +289,23 @@ def build_demo(args, embed_mode=False):
                 [state, attn_ana_plot]
             )
 
-        with gr.Tab("Question-to-Answer"):
+        with gr.Tab("Mean Token Question-to-Answer"):
             gr.Markdown("""
-            ### How To Use Attention Analysis:
+            ### How To Interpret Question to Answer:
+            * Mean (All output tokens) Influence of question tokens to llm response.
+            ```
+                Question tokens to response tokens:
+                similar to Image to Answer :
+                    but here we skip image tokens and only collect :
+                    mh_attns[img_idx+576:img_idx+576+len(question_tokens)]
+            ```
             """)
             with gr.Row():
-                with gr.Column(scale=3):
-                    # attn_ana_layer = gr.Slider(1, 100, step=1, label="Layer")
-                    attn_modality_select = gr.State("Question-to-Answer")
-                    attn_ana_submit = gr.Button(value="Plot attention matrix", interactive=True)
-                with gr.Column(scale=6):
-                    attn_ana_plot = gr.Plot(label="Attention plot")
+                attn_ana_plot = gr.Plot(label="Attention plot")
+            with gr.Row():
+                # attn_ana_layer = gr.Slider(1, 100, step=1, label="Layer")
+                attn_modality_select = gr.State("Question-to-Answer")
+                attn_ana_submit = gr.Button(value="Plot attention matrix", interactive=True)
 
         attn_ana_submit.click(
                 plot_attention_analysis,
@@ -292,10 +313,11 @@ def build_demo(args, embed_mode=False):
                 [state, attn_ana_plot]
             )
 
-        with gr.Tab("Attentions"):
+        with gr.Tab("Raw Attentions"):
             gr.Markdown("""
-            ### How To Use Attentions:
+            ### How To Use Raw Attentions:
             """)
+            # for more details refer : handle_attentions_i2t,
             with gr.Row():
                 # image box, select tokens ,[reset,plot]
                 with gr.Column(scale=3):
@@ -318,9 +340,19 @@ def build_demo(args, embed_mode=False):
 
                 with gr.Column(scale=9):
                     # heatmap for mean attention across all layers
-                    i2t_attn_head_mean_plot = gr.Plot(label="Image-to-Text attention average per head")
+                    # i2t_attn_head_mean_plot = gr.Plot(label="Image-to-Text attention average per head")
+                    i2t_attn_head_mean_plot = gr.Plot(label="Raw attention per head for all layers")
                     # saliency over all heads and all layers
                     i2t_attn_gallery = gr.Gallery(type="pil", label='Attention heatmaps', columns=8, interactive=False)
+
+        with gr.Tab("Attention Rollout"):
+            with gr.Row():
+                gr.Markdown("TODO")
+
+        with gr.Tab("Attention Flow"):
+            with gr.Row():
+                gr.Markdown("TODO")
+
 
         with gr.Tab("Patch to Head"):
             with gr.Row():
@@ -371,7 +403,7 @@ def build_demo(args, embed_mode=False):
 
         attn_submit.click(
             handle_attentions_i2t,
-            [state, generated_text, attn_select_layer],
+            [state, generated_text],
             [generated_text, imagebox_recover, i2t_attn_gallery, i2t_attn_head_mean_plot]
         )
 
