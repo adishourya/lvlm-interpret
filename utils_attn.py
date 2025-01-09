@@ -409,6 +409,7 @@ def plot_attention_analysis(state, attn_modality_select):
     
     # Img2TextAns Attention
     heatmap_mean = defaultdict(dict)
+    raw_heatmap = defaultdict(dict)
     if attn_modality_select == "Image-to-Answer":
         for layer_idx in range(num_layers):
             mh_attentions = [attentions[i][layer_idx][:,:,-1,:].squeeze() for i in range(len(generated_text))]
@@ -417,6 +418,7 @@ def plot_attention_analysis(state, attn_modality_select):
                 img_attn = torch.stack([mh_attention[head_idx, img_idx:img_idx+576].reshape(24,24) for mh_attention in mh_attentions]).float().cpu().numpy()
                 # img_attn /= img_attn.max()
                 heatmap_mean[layer_idx][head_idx] =  img_attn.mean() # img_attn.mean((1,2))
+                raw_heatmap[layer_idx][head_idx] = img_attn.mean(axis=0) #only over tokens
     elif attn_modality_select == "Question-to-Answer":
         fn_input_ids = state.attention_key + '_input_ids.pt'
         img_idx = state.image_idx
@@ -429,7 +431,12 @@ def plot_attention_analysis(state, attn_modality_select):
                 ques_attn = torch.stack([mh_attention[head_idx, img_idx+576:img_idx+576+len_question_only] for mh_attention in mh_attentions]).float().cpu().numpy()
                 # ques_attn /= ques_attn.max()
                 heatmap_mean[layer_idx][head_idx] = ques_attn.mean()
+
+    logger.info(f"raw : {raw_heatmap}")
+    logger.info(f"raw : {raw_heatmap[0][0].shape}")
     heatmap_mean_df = pd.DataFrame(heatmap_mean)
+    logger.info(f"dataframe shape : {heatmap_mean_df.shape}")
+
     fig = plt.figure(figsize=(num_layers,num_heads)) 
     ax = seaborn.heatmap(heatmap_mean_df,square=True,annot=True, cmap="coolwarm",cbar_kws={"orientation": "vertical","shrink":0.3})
     ax.set_xlabel("Layers")
