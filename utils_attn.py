@@ -410,7 +410,7 @@ def plot_attention_analysis(state, attn_modality_select):
     # Img2TextAns Attention
     heatmap_mean = defaultdict(dict)
     if attn_modality_select == "Image-to-Answer":
-        for layer_idx in range(1,num_layers):
+        for layer_idx in range(num_layers):
             mh_attentions = [attentions[i][layer_idx][:,:,-1,:].squeeze() for i in range(len(generated_text))]
             for head_idx in range(num_heads):
                 # mh_attentions = []
