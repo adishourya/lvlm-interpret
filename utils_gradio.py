@@ -50,8 +50,8 @@ A Fork mainted for : *todo*
 -----
 By using this service, users are required to agree to the following terms:
 The service is a research preview intended for non-commercial use only. It only provides limited safety measures and may generate offensive content. It must not be used for any illegal, harmful, violent, racist, or sexual purposes.
-
-    ##### -- Developed and Maintaned by : chang and me
+----
+```-- Developed and Maintaned by : chang and me```
 """)
 
 block_css = """
@@ -281,23 +281,25 @@ def build_demo(args, embed_mode=False):
                 # attn_ana_layer = gr.Slider(1, 100, step=1, label="Layer")
                 attn_modality_select = gr.State("Image-to-Answer")
                 attn_ana_submit = gr.Button(value="Plot attention matrix", interactive=True)
+            with gr.Row():
+                raw_mean_plot = gr.Plot(label="Pre Mean (only collapse mean token)")
 
 
         attn_ana_submit.click(
                 plot_attention_analysis,
                 [state, attn_modality_select],
-                [state, attn_ana_plot]
+                [state, attn_ana_plot, raw_mean_plot]
             )
 
         with gr.Tab("Mean Token Question-to-Answer"):
             gr.Markdown("""
             ### How To Interpret Question to Answer:
-            * Mean (All output tokens) Influence of question tokens to llm response.
             ```
-                Question tokens to response tokens:
-                similar to Image to Answer :
-                    but here we skip image tokens and only collect :
-                    mh_attns[img_idx+576:img_idx+576+len(question_tokens)]
+            * Mean (All output tokens) Influence of question tokens to llm response.
+            Question tokens to response tokens:
+            similar to Image to Answer :
+                but here we skip image tokens and only collect :
+                mh_attns[img_idx+576:img_idx+576+len(question_tokens)]
             ```
             """)
             with gr.Row():
@@ -306,71 +308,107 @@ def build_demo(args, embed_mode=False):
                 # attn_ana_layer = gr.Slider(1, 100, step=1, label="Layer")
                 attn_modality_select = gr.State("Question-to-Answer")
                 attn_ana_submit = gr.Button(value="Plot attention matrix", interactive=True)
+            with gr.Row():
+                raw_mean_plot = gr.Plot(label="Max Normalized Mean")
 
         attn_ana_submit.click(
                 plot_attention_analysis,
                 [state, attn_modality_select],
-                [state, attn_ana_plot]
+                [state, attn_ana_plot,raw_mean_plot]
             )
 
         with gr.Tab("Raw Attentions"):
             gr.Markdown("""
             ### How To Use Raw Attentions:
+            ```
+            steps:
+                * collect multihead attention for selected tokens
+                mha = attn[selected_tokens][:]
+                if num_query > 1 : # for token 0
+                    select qeury of last input id
+                fetch img_attn
+                img_attn = mha[img_idx:img_idx+576]
+                
+                for layer: for head:
+                cummuatively add img_attn over all heads in a layer
+                average the attn over number of selected tokens
+
+                sort on head with highest response
+            ```
             """)
             # for more details refer : handle_attentions_i2t,
             with gr.Row():
                 # image box, select tokens ,[reset,plot]
-                with gr.Column(scale=3):
-                    # thumbnail input image
-                    imagebox_recover = gr.Image(type="pil", label='Preprocessed image', interactive=False)
-                    
-                    # box to select tokens to backprop from
-                    generated_text = gr.HighlightedText(
-                        label="Generated text (tokenized)",
-                        combine_adjacent=False,
-                        interactive=True,
-                        color_map={"label": "green"}
-                    )
+                # thumbnail input image
+                imagebox_recover = gr.Image(type="pil", label='Preprocessed image', interactive=False)
+                # box to select tokens to incluede attentions from attn[sel_tokens][all_layers]
+                generated_text = gr.HighlightedText(
+                    label="Generated text (tokenized)",
+                    combine_adjacent=False,
+                    interactive=True,
+                    color_map={"label": "green"}
+                )
 
-                    # buttons to interact with generated text
-                    with gr.Row():
-                        select_all = gr.Button(value="Select All Tokens",interactive=True)
-                        attn_reset = gr.Button(value="Reset tokens", interactive=True)
-                        attn_submit = gr.Button(value="Plot attention", interactive=True)
+            # buttons to interact with generated text
+            with gr.Row():
+                select_all = gr.Button(value="Select All Tokens",interactive=True)
+                attn_reset = gr.Button(value="Reset tokens", interactive=True)
 
-                with gr.Column(scale=9):
-                    # heatmap for mean attention across all layers
-                    # i2t_attn_head_mean_plot = gr.Plot(label="Image-to-Text attention average per head")
-                    i2t_attn_head_mean_plot = gr.Plot(label="Raw attention per head for all layers")
-                    # saliency over all heads and all layers
-                    i2t_attn_gallery = gr.Gallery(type="pil", label='Attention heatmaps', columns=8, interactive=False)
+            with gr.Row():
+                attn_submit = gr.Button(value="Plot attention", interactive=True)
+            with gr.Row():
+                # heatmap for mean attention across all layers
+                # i2t_attn_head_mean_plot = gr.Plot(label="Image-to-Text attention average per head")
+                i2t_attn_head_mean_plot = gr.Plot(label="Raw attention per head for all layers")
+            with gr.Row():
+                # saliency over all heads and all layers
+                i2t_attn_gallery = gr.Gallery(type="pil", label='Attention heatmaps', columns=8, interactive=False)
 
         with gr.Tab("Attention Rollout"):
             with gr.Row():
                 gr.Markdown("TODO")
+
+            with gr.Row():
+                # image box, select tokens ,[reset,plot]
+                # thumbnail input image
+                imagebox_recover_rollout = gr.Image(type="pil", label='Preprocessed image', interactive=False)
+                # box to select tokens to incluede attentions from attn[sel_tokens][all_layers]
+                generated_text_rollout = gr.HighlightedText(
+                    label="Generated text (tokenized)",
+                    combine_adjacent=False,
+                    interactive=True,
+                    color_map={"label": "green"}
+                )
+
+            # buttons to interact with generated text
+            with gr.Row():
+                select_all_rollout = gr.Button(value="Select All Tokens",interactive=True)
+                attn_reset_rollout = gr.Button(value="Reset tokens", interactive=True)
+
+            with gr.Row():
+                rollout_plot = gr.Button(value="Plot Rollout attention", interactive=True)
 
         with gr.Tab("Attention Flow"):
             with gr.Row():
                 gr.Markdown("TODO")
 
 
-        with gr.Tab("Patch to Head"):
+        with gr.Tab("Patch to response"):
             with gr.Row():
-                # we probably dont need this now!
-                attn_select_layer = gr.Slider(1, N_LAYERS, value=32, step=1, label="Layer")
-            # patch selector box
-            box_states = gr.Dataframe(type="numpy", datatype="bool", row_count=24, col_count=24, visible=False) 
-            with gr.Row(equal_height=True):
-                with gr.Column(scale=3):
+                with gr.Column():
+                    box_states = gr.Dataframe(type="numpy", datatype="bool", row_count=24, col_count=24, visible=False) 
                     imagebox_recover_boxable = gr.Image(label='Patch Selector')
-                    attn_ana_head= gr.Slider(1, 40, step=1, label="Head Index")
-            
+                with gr.Column():
+                    attn_select_layer = gr.Slider(0, N_LAYERS, step=1, label="Layer")
+                    attn_ana_head= gr.Slider(0, 16, step=1, label="Head Index")
+                with gr.Column():
                     reset_boxes_btn = gr.Button(value="Reset patch selector")
                     attn_ana_submit_2 = gr.Button(value="Plot attention matrix", interactive=True)
                 
-                with gr.Column(scale=9):
-                    t2i_attn_head_mean_plot = gr.Plot(label="Text-to-Image attention average per head")
-                    attn_ana_plot_2 = gr.Plot(scale=2, label="Attention plot",container=True)
+            with gr.Row():
+                t2i_attn_head_mean_plot = gr.Plot(label="Text-to-Image attention average per head")
+            with gr.Row():
+                attn_ana_plot_2 = gr.Plot(label="Attention plot")
 
         
         reset_boxes_btn.click(
