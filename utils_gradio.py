@@ -50,8 +50,8 @@ A Fork mainted for : *todo*
 -----
 By using this service, users are required to agree to the following terms:
 The service is a research preview intended for non-commercial use only. It only provides limited safety measures and may generate offensive content. It must not be used for any illegal, harmful, violent, racist, or sexual purposes.
-
-    ##### -- Developed and Maintaned by : chang and me
+----
+```-- Developed and Maintaned by : chang and me```
 """)
 
 block_css = """
@@ -294,12 +294,12 @@ def build_demo(args, embed_mode=False):
         with gr.Tab("Mean Token Question-to-Answer"):
             gr.Markdown("""
             ### How To Interpret Question to Answer:
-            * Mean (All output tokens) Influence of question tokens to llm response.
             ```
-                Question tokens to response tokens:
-                similar to Image to Answer :
-                    but here we skip image tokens and only collect :
-                    mh_attns[img_idx+576:img_idx+576+len(question_tokens)]
+            * Mean (All output tokens) Influence of question tokens to llm response.
+            Question tokens to response tokens:
+            similar to Image to Answer :
+                but here we skip image tokens and only collect :
+                mh_attns[img_idx+576:img_idx+576+len(question_tokens)]
             ```
             """)
             with gr.Row():
@@ -320,34 +320,49 @@ def build_demo(args, embed_mode=False):
         with gr.Tab("Raw Attentions"):
             gr.Markdown("""
             ### How To Use Raw Attentions:
+            ```
+            steps:
+                * collect multihead attention for selected tokens
+                mha = attn[selected_tokens][:]
+                if num_query > 1 : # for token 0
+                    select qeury of last input id
+                fetch img_attn
+                img_attn = mha[img_idx:img_idx+576]
+                
+                for layer: for head:
+                cummuatively add img_attn over all heads in a layer
+                average the attn over number of selected tokens
+
+                sort on head with highest response
+            ```
             """)
             # for more details refer : handle_attentions_i2t,
             with gr.Row():
                 # image box, select tokens ,[reset,plot]
-                with gr.Column(scale=3):
-                    # thumbnail input image
-                    imagebox_recover = gr.Image(type="pil", label='Preprocessed image', interactive=False)
-                    
-                    # box to select tokens to backprop from
-                    generated_text = gr.HighlightedText(
-                        label="Generated text (tokenized)",
-                        combine_adjacent=False,
-                        interactive=True,
-                        color_map={"label": "green"}
-                    )
+                # thumbnail input image
+                imagebox_recover = gr.Image(type="pil", label='Preprocessed image', interactive=False)
+                # box to select tokens to backprop from
+                generated_text = gr.HighlightedText(
+                    label="Generated text (tokenized)",
+                    combine_adjacent=False,
+                    interactive=True,
+                    color_map={"label": "green"}
+                )
 
-                    # buttons to interact with generated text
-                    with gr.Row():
-                        select_all = gr.Button(value="Select All Tokens",interactive=True)
-                        attn_reset = gr.Button(value="Reset tokens", interactive=True)
-                        attn_submit = gr.Button(value="Plot attention", interactive=True)
+            # buttons to interact with generated text
+            with gr.Row():
+                select_all = gr.Button(value="Select All Tokens",interactive=True)
+                attn_reset = gr.Button(value="Reset tokens", interactive=True)
 
-                with gr.Column(scale=9):
-                    # heatmap for mean attention across all layers
-                    # i2t_attn_head_mean_plot = gr.Plot(label="Image-to-Text attention average per head")
-                    i2t_attn_head_mean_plot = gr.Plot(label="Raw attention per head for all layers")
-                    # saliency over all heads and all layers
-                    i2t_attn_gallery = gr.Gallery(type="pil", label='Attention heatmaps', columns=8, interactive=False)
+            with gr.Row():
+                attn_submit = gr.Button(value="Plot attention", interactive=True)
+            with gr.Row():
+                # heatmap for mean attention across all layers
+                # i2t_attn_head_mean_plot = gr.Plot(label="Image-to-Text attention average per head")
+                i2t_attn_head_mean_plot = gr.Plot(label="Raw attention per head for all layers")
+            with gr.Row():
+                # saliency over all heads and all layers
+                i2t_attn_gallery = gr.Gallery(type="pil", label='Attention heatmaps', columns=8, interactive=False)
 
         with gr.Tab("Attention Rollout"):
             with gr.Row():

@@ -76,6 +76,20 @@ def attn_update_slider(state):
 def handle_attentions_i2t(state, highlighted_text,token_idx=0):
     '''
         Draw attention heatmaps and return as a list of PIL images
+        steps:
+            * collect multihead attention for selected tokens
+            mha = attn[selected_tokens][:]
+            if num_query > 1 : # for token 0
+                select qeury of last input id
+            fetch img_attn
+            img_attn = mha[img_idx:img_idx+576]
+            
+            for layer: for head:
+            cummuatively add img_attn over all heads in a layer
+            average the attn over number of selected tokens
+
+            sort on highest response
+
     '''
 
     if not hasattr(state, 'attention_key'):
@@ -145,10 +159,11 @@ def handle_attentions_i2t(state, highlighted_text,token_idx=0):
                     mh_attention = attentions[token_idx][layer_idx]
                     batch_size, num_heads, inp_seq_len, seq_len = mh_attention.shape
                     if inp_seq_len > 1:
-                        # autoregressive. that is regress from first output token
+                        # if >1 that is attention of output token =0
+                        # so we select the query of the last input id token.
                         mh_attention = mh_attention[:,:,-1,:]
 
-                    # else : multihead attention (interaction image and question)
+                    # else : multihead attention of the output token >0
                     mh_attention = mh_attention.squeeze() # take out the batch dimension (here always 1)
                     img_attn_token = mh_attention[head_idx, img_idx:img_idx+576].reshape(24,24).float().cpu().numpy()
 
