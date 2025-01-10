@@ -341,7 +341,7 @@ def build_demo(args, embed_mode=False):
                 # image box, select tokens ,[reset,plot]
                 # thumbnail input image
                 imagebox_recover = gr.Image(type="pil", label='Preprocessed image', interactive=False)
-                # box to select tokens to backprop from
+                # box to select tokens to incluede attentions from attn[sel_tokens][all_layers]
                 generated_text = gr.HighlightedText(
                     label="Generated text (tokenized)",
                     combine_adjacent=False,
@@ -368,28 +368,47 @@ def build_demo(args, embed_mode=False):
             with gr.Row():
                 gr.Markdown("TODO")
 
+            with gr.Row():
+                # image box, select tokens ,[reset,plot]
+                # thumbnail input image
+                imagebox_recover_rollout = gr.Image(type="pil", label='Preprocessed image', interactive=False)
+                # box to select tokens to incluede attentions from attn[sel_tokens][all_layers]
+                generated_text_rollout = gr.HighlightedText(
+                    label="Generated text (tokenized)",
+                    combine_adjacent=False,
+                    interactive=True,
+                    color_map={"label": "green"}
+                )
+
+            # buttons to interact with generated text
+            with gr.Row():
+                select_all_rollout = gr.Button(value="Select All Tokens",interactive=True)
+                attn_reset_rollout = gr.Button(value="Reset tokens", interactive=True)
+
+            with gr.Row():
+                rollout_plot = gr.Button(value="Plot Rollout attention", interactive=True)
+
         with gr.Tab("Attention Flow"):
             with gr.Row():
                 gr.Markdown("TODO")
 
 
-        with gr.Tab("Patch to Head"):
+        with gr.Tab("Patch to response"):
             with gr.Row():
-                # we probably dont need this now!
-                attn_select_layer = gr.Slider(1, N_LAYERS, value=32, step=1, label="Layer")
-            # patch selector box
-            box_states = gr.Dataframe(type="numpy", datatype="bool", row_count=24, col_count=24, visible=False) 
-            with gr.Row(equal_height=True):
-                with gr.Column(scale=3):
+                with gr.Column():
+                    box_states = gr.Dataframe(type="numpy", datatype="bool", row_count=24, col_count=24, visible=False) 
                     imagebox_recover_boxable = gr.Image(label='Patch Selector')
-                    attn_ana_head= gr.Slider(1, 40, step=1, label="Head Index")
-            
+                with gr.Column():
+                    attn_select_layer = gr.Slider(0, N_LAYERS, step=1, label="Layer")
+                    attn_ana_head= gr.Slider(0, 16, step=1, label="Head Index")
+                with gr.Column():
                     reset_boxes_btn = gr.Button(value="Reset patch selector")
                     attn_ana_submit_2 = gr.Button(value="Plot attention matrix", interactive=True)
                 
-                with gr.Column(scale=9):
-                    t2i_attn_head_mean_plot = gr.Plot(label="Text-to-Image attention average per head")
-                    attn_ana_plot_2 = gr.Plot(scale=2, label="Attention plot",container=True)
+            with gr.Row():
+                t2i_attn_head_mean_plot = gr.Plot(label="Text-to-Image attention average per head")
+            with gr.Row():
+                attn_ana_plot_2 = gr.Plot(label="Attention plot")
 
         
         reset_boxes_btn.click(
