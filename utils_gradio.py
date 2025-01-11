@@ -3,6 +3,7 @@ import tempfile
 import logging
 
 from gradio.external import re
+from matplotlib import interactive
 import torch
 
 from PIL import Image
@@ -15,8 +16,9 @@ from torchvision.transforms.functional import to_pil_image
 from utils_model import get_processor_model, move_to_device, to_gradio_chatbot, process_image
 
 from utils_attn import (
-    handle_attentions_i2t, plot_attention_analysis, handle_relevancy, handle_text_relevancy, reset_tokens,select_all_tokens,
-    plot_text_to_image_analysis, handle_box_reset, boxes_click_handler, attn_update_slider
+    attention_rollout, handle_attentions_i2t, plot_attention_analysis, handle_relevancy, handle_text_relevancy, reset_tokens,select_all_tokens,
+    plot_text_to_image_analysis, handle_box_reset, boxes_click_handler, attn_update_slider,
+    attention_rollout
 )
 
 from utils_relevancy import construct_relevancy_map
@@ -369,24 +371,18 @@ def build_demo(args, embed_mode=False):
                 gr.Markdown("TODO")
 
             with gr.Row():
-                # image box, select tokens ,[reset,plot]
-                # thumbnail input image
-                imagebox_recover_rollout = gr.Image(type="pil", label='Preprocessed image', interactive=False)
-                # box to select tokens to incluede attentions from attn[sel_tokens][all_layers]
-                generated_text_rollout = gr.HighlightedText(
-                    label="Generated text (tokenized)",
-                    combine_adjacent=False,
-                    interactive=True,
-                    color_map={"label": "green"}
-                )
-
-            # buttons to interact with generated text
+                fusion_method = gr.Dropdown(choices=["mean","min","max"],value="mean",label="Fusion Method")
+                discard_ratio = gr.Slider(minimum=0,maximum=1,step=0.1, label="Discard ratio")
+                rollout_submit = gr.Button(value="Plot rollout",interactive=True)
             with gr.Row():
-                select_all_rollout = gr.Button(value="Select All Tokens",interactive=True)
-                attn_reset_rollout = gr.Button(value="Reset tokens", interactive=True)
+                rollout_plot = gr.Plot(label="rollout plot")
 
-            with gr.Row():
-                rollout_plot = gr.Button(value="Plot Rollout attention", interactive=True)
+            rollout_submit.click(
+                attention_rollout,
+                [state, fusion_method,discard_ratio],
+                [rollout_plot]
+            )
+
 
         with gr.Tab("Attention Flow"):
             with gr.Row():
@@ -401,7 +397,6 @@ def build_demo(args, embed_mode=False):
                 with gr.Column():
                     attn_select_layer = gr.Slider(0, N_LAYERS, step=1, label="Layer")
                     attn_ana_head= gr.Slider(0, 16, step=1, label="Head Index")
-                with gr.Column():
                     reset_boxes_btn = gr.Button(value="Reset patch selector")
                     attn_ana_submit_2 = gr.Button(value="Plot attention matrix", interactive=True)
                 

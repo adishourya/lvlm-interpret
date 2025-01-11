@@ -1,6 +1,7 @@
 import os, sys
 sys.path.append(os.getenv('LLAVA_HOME'))
 
+import einops
 from collections import defaultdict
 import numpy as np
 import torch
@@ -558,8 +559,8 @@ def plot_text_to_image_analysis(state, layer_idx, boxes, head_idx):
         # color = plt.get_cmap("coolwarm")(value)
         color = plt.get_cmap("coolwarm")(value)
         color = to_rgba(color, alpha=0.6) 
-        ax_words.text(x_position, 0.5, word, color=color, fontsize=14, ha='left', va='center')
-        x_position += 0.10 
+        ax_words.text(x_position, 0.5, word, color=color, fontsize=12, ha='left', va='center')
+        x_position += 0.05 
 
     cax = fig.add_axes([0.1, 0.15, 0.8, 0.03])  
     norm = plt.Normalize(min(normalized_values), max(normalized_values))
@@ -593,6 +594,61 @@ def plot_text_to_image_analysis(state, layer_idx, boxes, head_idx):
     fig2.tight_layout()
     return state, fig, fig2
 
+def attention_rollout(state,fusion_method="mean",discard_ratio=0.2):
+    """
+    Experimental:
+    """
+    fn_attention = state.attention_key + '_attn.pt'
+    img_recover = state.recovered_image
+    img_idx = 0
+    token_idx=0
+    # img_idx = state.image_idx
+    # generated_text = state.output_ids_decoded
+
+    if os.path.exists(fn_attention):
+        attentions = torch.load(fn_attention,weights_only=True)
+        logger.info(f'Loaded attention from {fn_attention}')
+        if len(attentions) == len(state.output_ids_decoded):
+            gr.Error('Mismatch between lengths of attentions and output tokens')
+        
+        num_tokens = len(attentions)
+        num_layers = len(attentions[token_idx])
+    else:
+        gr.Error("did not find attention")
+        return
+
+    result = torch.eye(24*24) 
+    for layer_idx in range(num_layers):
+        #squeeze out the batch dimension
+        attn_layer = einops.rearrange(attentions[token_idx][layer_idx],
+                                     "1 h q k -> h q k") 
+        # get fused attention across heads of that layer
+        attn_layer = einops.reduce(attn_layer,
+                                   "h q k -> q k",
+                                   fusion_method)
+        # fetch img patches
+        attn_layer = attn_layer[img_idx:img_idx+576, img_idx:img_idx+576]
+
+        # keep only top k highest response patches
+        _, indices = attn_layer.topk(int(attn_layer.size(-1)*discard_ratio), -1, False)
+        attn_layer[0, indices] = 0
+
+        # rollout
+        I = torch.eye(attn_layer.shape[0])
+        a = (attn_layer + I) / 2
+        a = a / a.sum(dim=-1, keepdim=True)
+
+        # Multiply with the accumulated result
+        result = torch.matmul(a, result)
+
+    roll_map = result[:,0]
+    roll_map = roll_map.view(24,-1).float().numpy()
+
+    roll_map = roll_map/np.max(roll_map)
+    fig = plt.figure()
+    plt.imshow(roll_map,cmap="coolwarm")
+    plt.colorbar()
+    return fig
 
 def reset_tokens(state):
     generated_text = []

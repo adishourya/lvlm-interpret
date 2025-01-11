@@ -9,4 +9,4 @@ matplotlib
 seaborn
 scipy
 bitsandbytes
-
+einops
