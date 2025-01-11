@@ -4,6 +4,7 @@ import logging
 
 from gradio.external import re
 from matplotlib import interactive
+from numpy.ma import maximum, minimum
 import torch
 
 from PIL import Image
@@ -372,15 +373,34 @@ def build_demo(args, embed_mode=False):
 
             with gr.Row():
                 fusion_method = gr.Dropdown(choices=["mean","min","max"],value="mean",label="Fusion Method")
-                discard_ratio = gr.Slider(minimum=0,maximum=1,step=0.1, label="Discard ratio")
+                cls_index = gr.Slider(minimum=0,maximum=20,step=1,label="Debugging cls index")
+                topk = gr.Slider(minimum=0,maximum=1,step=0.1,label="top k saliency")
                 rollout_submit = gr.Button(value="Plot rollout",interactive=True)
+
             with gr.Row():
                 rollout_plot = gr.Plot(label="rollout plot")
+            with gr.Row():
+                rollout_overlay1 = gr.Image(label="Rollout overlay column major",interactive=False)
+                rollout_overlay2 = gr.Image(label="Rollout overlay diagnoal",interactive=False)
+            with gr.Row():
+                gr.Markdown("""
+                            ```
+                            @misc{abnar2020quantifyingattentionflowtransformers,
+                            title={Quantifying Attention Flow in Transformers}, 
+                            author={Samira Abnar and Willem Zuidema},
+                            year={2020},
+                            eprint={2005.00928},
+                            archivePrefix={arXiv},
+                            primaryClass={cs.LG},
+                            url={https://arxiv.org/abs/2005.00928}, 
+                            }
+                            ```
+                            """)
 
             rollout_submit.click(
                 attention_rollout,
-                [state, fusion_method,discard_ratio],
-                [rollout_plot]
+                [state, fusion_method,cls_index,topk],
+                [rollout_plot, rollout_overlay1,rollout_overlay2]
             )
 
 

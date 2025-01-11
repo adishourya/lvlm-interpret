@@ -594,15 +594,14 @@ def plot_text_to_image_analysis(state, layer_idx, boxes, head_idx):
     fig2.tight_layout()
     return state, fig, fig2
 
-def attention_rollout(state,fusion_method="mean",discard_ratio=0.2):
+def attention_rollout(state,fusion_method="mean", cls_idx=0):
     """
     Experimental:
     """
     fn_attention = state.attention_key + '_attn.pt'
     img_recover = state.recovered_image
-    img_idx = 0
     token_idx=0
-    # img_idx = state.image_idx
+    img_idx = state.image_idx
     # generated_text = state.output_ids_decoded
 
     if os.path.exists(fn_attention):
@@ -617,38 +616,42 @@ def attention_rollout(state,fusion_method="mean",discard_ratio=0.2):
         gr.Error("did not find attention")
         return
 
-    result = torch.eye(24*24) 
+    attn = attentions[token_idx]
+
+    I = torch.eye(cls_idx + img_idx+576)
+    roll_map = torch.eye(cls_idx+img_idx+576)
+
     for layer_idx in range(num_layers):
-        #squeeze out the batch dimension
-        attn_layer = einops.rearrange(attentions[token_idx][layer_idx],
-                                     "1 h q k -> h q k") 
-        # get fused attention across heads of that layer
-        attn_layer = einops.reduce(attn_layer,
-                                   "h q k -> q k",
-                                   fusion_method)
-        # fetch img patches
-        attn_layer = attn_layer[img_idx:img_idx+576, img_idx:img_idx+576]
+        layer_map = einops.rearrange(attn[layer_idx],
+                                    "1 h q k -> h q k")
+        fused_map = einops.reduce(layer_map,
+                                  "h q k -> q k",fusion_method)
+        fused_map = fused_map[cls_idx:cls_idx+img_idx+576,
+                              cls_idx:cls_idx+img_idx+576].float()
+        roll_map = roll_map @ (fused_map+I)/2
+        # this makes a lower triangular matrix (use sum dim as 1)
+        roll_map = roll_map/roll_map.sum(dim=-1,keepdim=True)
 
-        # keep only top k highest response patches
-        _, indices = attn_layer.topk(int(attn_layer.size(-1)*discard_ratio), -1, False)
-        attn_layer[0, indices] = 0
+    # fetch the img_features
+    roll_map = roll_map[img_idx:img_idx+576, img_idx:img_idx+576] 
+    column_major_map = roll_map[:,0].view(24,-1)
+    column_major_map = column_major_map/column_major_map.max()
 
-        # rollout
-        I = torch.eye(attn_layer.shape[0])
-        a = (attn_layer + I) / 2
-        a = a / a.sum(dim=-1, keepdim=True)
+    diag_map = torch.diag(roll_map).view(24,-1)
+    diag_map = diag_map/diag_map.max()
+    
+    fig,ax = plt.subplots(1,2,figsize=(15,8))
+    ax[0].imshow(column_major_map,cmap="coolwarm")
+    ax[0].set_ylabel("Column Major")
+    ax[1].imshow(diag_map,cmap="coolwarm")
+    ax[1].set_ylabel("Diagnoal")
+    plt.suptitle("Attention Rollout")
 
-        # Multiply with the accumulated result
-        result = torch.matmul(a, result)
 
-    roll_map = result[:,0]
-    roll_map = roll_map.view(24,-1).float().numpy()
+    img_overlay_attn1 = draw_heatmap_on_image(column_major_map, img_recover)
+    img_overlay_attn2 = draw_heatmap_on_image(diag_map, img_recover)
 
-    roll_map = roll_map/np.max(roll_map)
-    fig = plt.figure()
-    plt.imshow(roll_map,cmap="coolwarm")
-    plt.colorbar()
-    return fig
+    return fig,img_overlay_attn1,img_overlay_attn2
 
 def reset_tokens(state):
     generated_text = []
