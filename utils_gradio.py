@@ -374,7 +374,7 @@ def build_demo(args, embed_mode=False):
             with gr.Row():
                 fusion_method = gr.Dropdown(choices=["mean","min","max"],value="mean",label="Fusion Method")
                 cls_index = gr.Slider(minimum=0,maximum=20,step=1,label="Debugging cls index")
-                topk = gr.Slider(minimum=0,maximum=1,step=0.1,label="top k saliency")
+                topk = gr.Slider(minimum=0,maximum=1,step=0.1,label="1 - top k saliency (discard ratio)")
                 rollout_submit = gr.Button(value="Plot rollout",interactive=True)
 
             with gr.Row():

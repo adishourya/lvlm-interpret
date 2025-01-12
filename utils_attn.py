@@ -594,7 +594,7 @@ def plot_text_to_image_analysis(state, layer_idx, boxes, head_idx):
     fig2.tight_layout()
     return state, fig, fig2
 
-def attention_rollout(state,fusion_method="mean", cls_idx=0):
+def attention_rollout(state,fusion_method="mean",cls_idx=0,topk=0.0):
     """
     Experimental:
     """
@@ -602,6 +602,7 @@ def attention_rollout(state,fusion_method="mean", cls_idx=0):
     img_recover = state.recovered_image
     token_idx=0
     img_idx = state.image_idx
+    discard_ratio=topk
     # generated_text = state.output_ids_decoded
 
     if os.path.exists(fn_attention):
@@ -628,6 +629,11 @@ def attention_rollout(state,fusion_method="mean", cls_idx=0):
                                   "h q k -> q k",fusion_method)
         fused_map = fused_map[cls_idx:cls_idx+img_idx+576,
                               cls_idx:cls_idx+img_idx+576].float()
+
+        _, indices = fused_map.topk(int(fused_map.size(-1)*discard_ratio), -1, False)
+        #indices = indices[indices != 0]
+        fused_map[0, indices] = 0
+
         roll_map = roll_map @ (fused_map+I)/2
         # this makes a lower triangular matrix (use sum dim as 1)
         roll_map = roll_map/roll_map.sum(dim=-1,keepdim=True)
