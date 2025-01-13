@@ -19,7 +19,7 @@ from utils_model import get_processor_model, move_to_device, to_gradio_chatbot, 
 from utils_attn import (
     attention_rollout, handle_attentions_i2t, plot_attention_analysis, handle_relevancy, handle_text_relevancy, reset_tokens,select_all_tokens,
     plot_text_to_image_analysis, handle_box_reset, boxes_click_handler, attn_update_slider,
-    attention_rollout
+    attention_rollout, attention_flow
 )
 
 from utils_relevancy import construct_relevancy_map
@@ -40,25 +40,31 @@ model = None
 
 system_prompt = """You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe.  Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
 If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information."""
+
 # system_prompt = ""
 # system_prompt ="""A chat between a curious human and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the human's questions."""
 
 title_markdown = ("""
-# An Interpretabity tool for Vision Language Models
+# A Saliency Inspection tool for Vision Language Models
 """)
 
 tos_markdown = ("""
 #### Terms of use
-A Fork mainted for : *todo*
------
+A Fork mainted for : *#TODO!*
 By using this service, users are required to agree to the following terms:
-The service is a research preview intended for non-commercial use only. It only provides limited safety measures and may generate offensive content. It must not be used for any illegal, harmful, violent, racist, or sexual purposes.
-----
-```-- Developed and Maintaned by : chang and me```
+##### The service is a research preview intended for non-commercial use only. It only provides limited safety measures and may generate offensive content. It must not be used for any illegal, harmful, violent, racist, or sexual purposes.
 """)
 
-block_css = """
+authors_markdown = (
+        """
+        ### Developed and maintained by Chang and me
+        ```
+        TODO add citations
+        ```
+        """
+)
 
+block_css = """
 #image_canvas canvas {
     max-width: 400px !important;
     max-height: 400px !important;
@@ -67,7 +73,6 @@ block_css = """
 #buttons button {
     min-width: min(120px,100%);
 }
-
 """
 
 def clear_history(request: gr.Request):
@@ -367,21 +372,29 @@ def build_demo(args, embed_mode=False):
                 # saliency over all heads and all layers
                 i2t_attn_gallery = gr.Gallery(type="pil", label='Attention heatmaps', columns=8, interactive=False)
 
-        with gr.Tab("Attention Rollout"):
+        with gr.Tab("Attention Rollout [Experimental]"):
             with gr.Row():
-                gr.Markdown("TODO")
+                gr.Markdown("""```
+                            For more details read paper [1]
+                            we calculate a summarized version of attention from the vision tower using attention rollout.
+                            The saliency is independent of the text input ids.
+                            This fuses across all heads (choose fusion method)
+                            and across all layers with: `A(li) =A(li) A(li)-1 `
+                            ```
+                            """)
 
             with gr.Row():
-                fusion_method = gr.Dropdown(choices=["mean","min","max"],value="mean",label="Fusion Method")
+                fusion_method_rollout = gr.Dropdown(choices=["mean","min","max"],value="mean",label="Fusion Method")
                 cls_index = gr.Slider(minimum=0,maximum=20,step=1,label="Debugging cls index")
-                topk = gr.Slider(minimum=0,maximum=1,step=0.1,label="1 - top k saliency (discard ratio)")
+                topk_rollout = gr.Slider(minimum=0,maximum=1,step=0.1,label="1 - top k saliency (discard ratio)")
                 rollout_submit = gr.Button(value="Plot rollout",interactive=True)
 
             with gr.Row():
                 rollout_plot = gr.Plot(label="rollout plot")
-            with gr.Row():
-                rollout_overlay1 = gr.Image(label="Rollout overlay column major",interactive=False)
                 rollout_overlay2 = gr.Image(label="Rollout overlay diagnoal",interactive=False)
+            # with gr.Row():
+            #     rollout_overlay1 = gr.Image(label="Rollout overlay column major",interactive=False)
+            #     rollout_overlay2 = gr.Image(label="Rollout overlay diagnoal",interactive=False)
             with gr.Row():
                 gr.Markdown("""
                             ```
@@ -393,20 +406,55 @@ def build_demo(args, embed_mode=False):
                             archivePrefix={arXiv},
                             primaryClass={cs.LG},
                             url={https://arxiv.org/abs/2005.00928}, 
-                            }
+                            }[1]
                             ```
                             """)
 
             rollout_submit.click(
                 attention_rollout,
-                [state, fusion_method,cls_index,topk],
-                [rollout_plot, rollout_overlay1,rollout_overlay2]
+                [state, fusion_method_rollout,cls_index,topk_rollout],
+                [rollout_plot,rollout_overlay2]
             )
 
-
-        with gr.Tab("Attention Flow"):
+        with gr.Tab("Attention Flow [Experimental]"):
             with gr.Row():
-                gr.Markdown("TODO")
+                gr.Markdown("""
+                            ```
+                            Treating the attention graph as a flow network,
+                            where the capacities of the edges are attention
+                            weights, using any maximum flow algorithm, we
+                            can compute the maximum attention flow from any
+                            node in any of the layers to any of the input nodes.[1]
+                            ```
+                            """)
+            with gr.Row():
+                fusion_method_flow = gr.Dropdown(choices=["mean","min","max"],value="min",label="Fusion Method")
+                cls_idx_rollout = gr.Slider(minimum=0,maximum=20,step=1,label="Debugging cls index")
+                topk_rollout = gr.Slider(minimum=0,maximum=1,step=0.05,label="Discard Ratio")
+                flow_submit = gr.Button(value="Plot Attention",interactive=True)
+            with gr.Row():
+                flow_strength_plot = gr.Plot(label="Flow strength plot")
+                flow_overlay = gr.Image(label="Columnar Sourced")
+            with gr.Row():
+                gr.Markdown("""
+                            ```
+                            @misc{abnar2020quantifyingattentionflowtransformers,
+                            title={Quantifying Attention Flow in Transformers}, 
+                            author={Samira Abnar and Willem Zuidema},
+                            year={2020},
+                            eprint={2005.00928},
+                            archivePrefix={arXiv},
+                            primaryClass={cs.LG},
+                            url={https://arxiv.org/abs/2005.00928}, 
+                            }[1]
+                            ```
+                            """)
+                
+            flow_submit.click(
+                attention_flow,
+                [state, fusion_method_flow,cls_idx_rollout,topk_rollout],
+                [flow_strength_plot,flow_overlay]
+            )
 
 
         with gr.Tab("Patch to response"):
@@ -464,6 +512,7 @@ def build_demo(args, embed_mode=False):
 
         if not embed_mode:
             gr.Markdown(tos_markdown)
+            gr.Markdown(authors_markdown)
 
         clear_btn.click(
             clear_history,

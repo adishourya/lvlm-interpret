@@ -68,10 +68,10 @@ def draw_heatmap_on_image(mat, img_recover, normalize=True):
 
 def attn_update_slider(state):
     fn_attention = state.attention_key + '_attn.pt'
-    attentions = torch.load(fn_attention, mmap=True)
+    attentions = torch.load(fn_attention,weights_only=True, mmap=True)
     num_layers = len(attentions[0])
     # is slider the best module for this ? 
-    return state, gr.Slider(1, num_layers, value=num_layers, step=1, label="Layer")
+    return state, gr.Slider(0, num_layers, value=num_layers, step=1, label="Layer")
 
 
 def handle_attentions_i2t(state, highlighted_text,token_idx=0):
@@ -137,7 +137,7 @@ def handle_attentions_i2t(state, highlighted_text,token_idx=0):
     if not os.path.exists(fn_attention):
         gr.Error('Attention file not found. Please re-run query.')
     else:
-        attentions = torch.load(fn_attention)
+        attentions = torch.load(fn_attention,weights_only=True)
         logger.info(f'Loaded attention from {fn_attention}')
         if len(attentions) == len(state.output_ids_decoded):
             gr.Error('Mismatch between lengths of attentions and output tokens')
@@ -408,7 +408,7 @@ def plot_attention_analysis(state, attn_modality_select):
     logger.info(f"From Plot attention analysis {img_idx=}")
 
     if os.path.exists(fn_attention):
-        attentions = torch.load(fn_attention)
+        attentions = torch.load(fn_attention,weights_only=True)
         logger.info(f'Loaded attention from {fn_attention}')
         if len(attentions) == len(state.output_ids_decoded):
             gr.Error('Mismatch between lengths of attentions and output tokens')
@@ -438,7 +438,7 @@ def plot_attention_analysis(state, attn_modality_select):
     elif attn_modality_select == "Question-to-Answer":
         fn_input_ids = state.attention_key + '_input_ids.pt'
         img_idx = state.image_idx
-        input_ids = torch.load(fn_input_ids)
+        input_ids = torch.load(fn_input_ids,weights_only=True)
         len_question_only = input_ids.shape[1] - img_idx - 1
         for layer_idx in range(num_layers):
             for head_idx in range(num_heads):
@@ -499,7 +499,7 @@ def plot_text_to_image_analysis(state, layer_idx, boxes, head_idx):
         img_patches = [(12,12)]
         logger.info(f"No Patch given used middle point {img_patches}")
     if os.path.exists(fn_attention):
-        attentions = torch.load(fn_attention)
+        attentions = torch.load(fn_attention,weights_only=True)
         logger.info(f'Loaded attention from {fn_attention}')
         if len(attentions) == len(state.output_ids_decoded):
             gr.Error('Mismatch between lengths of attentions and output tokens')
@@ -596,7 +596,7 @@ def plot_text_to_image_analysis(state, layer_idx, boxes, head_idx):
 
 def attention_rollout(state,fusion_method="mean",cls_idx=0,topk=0.0):
     """
-    Experimental:
+    Experimental Implementation
     """
     fn_attention = state.attention_key + '_attn.pt'
     img_recover = state.recovered_image
@@ -618,6 +618,8 @@ def attention_rollout(state,fusion_method="mean",cls_idx=0,topk=0.0):
         return
 
     attn = attentions[token_idx]
+    # _,_,q_size,k_size = attn[0].shape
+    # assert q_size == k_size , "we will calculate only for first token"
 
     I = torch.eye(cls_idx + img_idx+576)
     roll_map = torch.eye(cls_idx+img_idx+576)
@@ -646,18 +648,91 @@ def attention_rollout(state,fusion_method="mean",cls_idx=0,topk=0.0):
     diag_map = torch.diag(roll_map).view(24,-1)
     diag_map = diag_map/diag_map.max()
     
-    fig,ax = plt.subplots(1,2,figsize=(15,8))
-    ax[0].imshow(column_major_map,cmap="coolwarm")
-    ax[0].set_ylabel("Column Major")
-    ax[1].imshow(diag_map,cmap="coolwarm")
-    ax[1].set_ylabel("Diagnoal")
+    fig= plt.figure(figsize=(15,8))
+    # ax[0].imshow(column_major_map,cmap="coolwarm")
+    # ax[0].set_ylabel("Debugging Column Major")
+    # ax[0].colorbar()
+    plt.imshow(diag_map,cmap="coolwarm")
+    plt.title("Diagnoally sourced attention rollout")
+    plt.colorbar()
     plt.suptitle("Attention Rollout")
 
 
-    img_overlay_attn1 = draw_heatmap_on_image(column_major_map, img_recover)
+    # img_overlay_attn1 = draw_heatmap_on_image(column_major_map, img_recover)
     img_overlay_attn2 = draw_heatmap_on_image(diag_map, img_recover)
 
-    return fig,img_overlay_attn1,img_overlay_attn2
+    return fig,img_overlay_attn2
+
+def attention_flow(state,fusion_method= "min",cls_idx=0,topk=0.2):
+    """
+    Experimental Implementation
+    Computes Attention Flow to determine the strongest path between the class token and image tokens.
+    """
+
+    fn_attention = state.attention_key + '_attn.pt'
+    img_recover = state.recovered_image
+    token_idx=0
+    img_idx = state.image_idx
+    discard_ratio=topk
+
+    if os.path.exists(fn_attention):
+        attentions = torch.load(fn_attention,weights_only=True)
+        logger.info(f'Loaded attention from {fn_attention}')
+        if len(attentions) == len(state.output_ids_decoded):
+            gr.Error('Mismatch between lengths of attentions and output tokens')
+        
+        num_tokens = len(attentions)
+        num_layers = len(attentions[token_idx])
+    else:
+        gr.Error("did not find attention")
+        return
+
+    attn = attentions[token_idx]
+    num_layers = len(attn)
+    img_idx_end = cls_idx + img_idx + 576 
+
+    # Initialize flow map as identity matrix
+    flow_map = torch.eye(img_idx_end)
+    
+    # Compute attention flow across layers
+    for layer_idx in range(num_layers):
+        layer_map = einops.rearrange(attn[layer_idx], "1 h q k -> h q k")
+        fused_map = einops.reduce(layer_map, "h q k -> q k", fusion_method)
+        
+        fused_map = fused_map[cls_idx:img_idx_end,
+                              cls_idx:img_idx_end]
+
+        # discard less salient patches (similar to what we did in rollout)
+        # does not work !!
+        # _, indices = fused_map.topk(int(fused_map.size(-1)*discard_ratio), -1, False)
+        # #indices = indices[indices != 0]
+        # fused_map[0, indices] = 0
+
+        # instead of discarding maybe we can give an option to use any other
+        # column than column 0. as they are decresing in nature no? 
+        
+        # Normalize attention on keys
+        fused_map = fused_map / fused_map.sum(dim=-1, keepdim=True)
+        
+        # 🫣 todo: double check this later
+        flow_map = torch.max(
+            einops.rearrange(flow_map, "q k -> 1 q k"),
+            einops.rearrange(fused_map, "q k -> q 1 k")
+        ).max(dim=0).values
+
+    flow_map = flow_map[img_idx:img_idx_end,
+                        img_idx:img_idx_end]
+    flow_columnar = flow_map[0,:].view(24,-1)
+
+    fig,ax = plt.subplots(1,2,figsize=(15,8))
+    ax[0].imshow(flow_map,cmap="viridis")
+    ax[0].set_ylabel("Flow strength")
+
+    ax[1].imshow(flow_columnar,cmap="coolwarm")
+    ax[1].set_ylabel("Attention Flow")
+
+    flow_img = draw_heatmap_on_image(flow_columnar, img_recover)
+    return fig,flow_img
 
 def reset_tokens(state):
     generated_text = []
