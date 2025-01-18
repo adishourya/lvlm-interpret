@@ -71,7 +71,7 @@ def attn_update_slider(state):
     attentions = torch.load(fn_attention,weights_only=True, mmap=True)
     num_layers = len(attentions[0])
     # is slider the best module for this ? 
-    return state, gr.Slider(0, num_layers, value=num_layers, step=1, label="Layer")
+    return state, gr.Slider(0, num_layers-1, value=num_layers-1, step=1, label="Layer")
 
 
 def handle_attentions_i2t(state, highlighted_text,token_idx=0):
