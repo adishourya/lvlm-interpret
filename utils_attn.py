@@ -198,6 +198,7 @@ def handle_attentions_i2t(state, highlighted_text,token_idx=0):
                 )
                 ax[layer_id].set_ylabel(f'Layer "{layer_id}')
         fig.tight_layout()
+        plt.savefig(state.attention_key + 'mean_per_layer_scores_for_all_layers.png')
 
         all_attn_list = [item for sublist in img_attn_layers.values() for item in sublist]
         logger.info(f"length attention images: {len(all_attn_list)}")
@@ -459,6 +460,8 @@ def plot_attention_analysis(state, attn_modality_select):
     ax.set_xlabel("Layers")
     ax.set_ylabel("Heads")
     ax.set_title(f"{attn_modality_select} Mean Attention")
+    fig.tight_layout()
+    fig.savefig(state.attention_key + 'mean_image_to_answer.png')
 
     if attn_modality_select == "Image-to-Answer":
         fig2,ax2 = plt.subplots(nrows=num_heads, ncols=num_layers, figsize=(num_layers,num_heads))
@@ -472,6 +475,8 @@ def plot_attention_analysis(state, attn_modality_select):
             ax2[0][j].set_title(f"Layer {j}", fontsize=10)  # Add titles to the top of each column
         for i in range(num_heads):
             ax2[i][0].set_ylabel(f"Head {i}", fontsize=10, rotation=0, labelpad=30, ha='right')  # Add labels to the first column
+        fig2.tight_layout()
+        fig2.savefig(state.attention_key + 'image_to_answer_raw.png')
     elif attn_modality_select == "Question-to-Answer":
         raw_normalized_df = pd.DataFrame(raw_heatmap)
         fig2 = plt.figure(figsize=(num_layers,num_heads)) 
@@ -479,10 +484,10 @@ def plot_attention_analysis(state, attn_modality_select):
         ax.set_xlabel("Layers")
         ax.set_ylabel("Heads")
         ax.set_title(f"{attn_modality_select} Max Normalized mean Attention")
-
-
-    fig.tight_layout()
-    fig2.tight_layout()
+        fig.tight_layout()
+        fig2.tight_layout()
+        fig.savefig(state.attention_key + 'question_to_answer1.png')
+        fig2.savefig(state.attention_key + 'question_to_answer2.png')
 
     return state, fig,fig2
 
@@ -572,6 +577,7 @@ def plot_text_to_image_analysis(state, layer_idx, boxes, head_idx):
 
     ax_words.axis('off')
     plt.suptitle(f"Attention to the selected image patch(es) of head #{head_idx} and layer #{layer_idx}", fontsize=16, y=0.8, x=0.6)    
+    plt.savefig(state.attention_key + 'attention_to_the_selected_patches.png')
     
     def stacked_patch(mh):
         return torch.stack([mh[:, :, x, y] for x, y in img_patches]).mean(0).float().cpu().mean(-1)
@@ -592,9 +598,10 @@ def plot_text_to_image_analysis(state, layer_idx, boxes, head_idx):
     ax2[-1].set_xlabel('Head number')
     ax2[-1].set_title(f"Mean Head Attention between the image patches selected and the answer for all layers")
     fig2.tight_layout()
+    fig2.savefig(state.attention_key + 'mean_head_attn_all_layers.png')
     return state, fig, fig2
 
-def attention_rollout(state,fusion_method="mean",cls_idx=0,topk=0.0):
+def attention_rollout(state,fusion_method="min",cls_idx=0,topk=0.0,start_roll=0):
     """
     Experimental Implementation
     """
@@ -617,6 +624,8 @@ def attention_rollout(state,fusion_method="mean",cls_idx=0,topk=0.0):
         gr.Error("did not find attention")
         return
 
+    assert start_roll < num_layers , f"{start_roll=} should be less than {num_layers=}"
+
     attn = attentions[token_idx]
     # _,_,q_size,k_size = attn[0].shape
     # assert q_size == k_size , "we will calculate only for first token"
@@ -624,7 +633,7 @@ def attention_rollout(state,fusion_method="mean",cls_idx=0,topk=0.0):
     I = torch.eye(cls_idx + img_idx+576)
     roll_map = torch.eye(cls_idx+img_idx+576)
 
-    for layer_idx in range(num_layers):
+    for layer_idx in range(start_roll,num_layers):
         layer_map = einops.rearrange(attn[layer_idx],
                                     "1 h q k -> h q k")
         fused_map = einops.reduce(layer_map,
@@ -663,7 +672,7 @@ def attention_rollout(state,fusion_method="mean",cls_idx=0,topk=0.0):
 
     return fig,img_overlay_attn2
 
-def attention_flow(state,fusion_method= "min",cls_idx=0,topk=0.2):
+def attention_flow(state,fusion_method= "min",cls_idx=0,topk=0.2,start_flow=0):
     """
     Experimental Implementation
     Computes Attention Flow to determine the strongest path between the class token and image tokens.
@@ -690,12 +699,13 @@ def attention_flow(state,fusion_method= "min",cls_idx=0,topk=0.2):
     attn = attentions[token_idx]
     num_layers = len(attn)
     img_idx_end = cls_idx + img_idx + 576 
+    assert start_flow < num_layers , f"{start_flow=} should be less than {num_layers=}"
 
     # Initialize flow map as identity matrix
     flow_map = torch.eye(img_idx_end)
     
     # Compute attention flow across layers
-    for layer_idx in range(num_layers):
+    for layer_idx in range(start_flow,num_layers):
         layer_map = einops.rearrange(attn[layer_idx], "1 h q k -> h q k")
         fused_map = einops.reduce(layer_map, "h q k -> q k", fusion_method)
         
@@ -730,6 +740,7 @@ def attention_flow(state,fusion_method= "min",cls_idx=0,topk=0.2):
 
     ax[1].imshow(flow_columnar,cmap="coolwarm")
     ax[1].set_ylabel("Attention Flow")
+    fig.savefig(state.attention_key + '_flow.png')
 
     flow_img = draw_heatmap_on_image(flow_columnar, img_recover)
     return fig,flow_img

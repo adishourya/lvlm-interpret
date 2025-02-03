@@ -384,8 +384,9 @@ def build_demo(args, embed_mode=False):
                             """)
 
             with gr.Row():
-                fusion_method_rollout = gr.Dropdown(choices=["mean","min","max"],value="mean",label="Fusion Method")
+                fusion_method_rollout = gr.Dropdown(choices=["mean","min","max"],value="min",label="Fusion Method")
                 cls_index = gr.Slider(minimum=0,maximum=20,step=1,label="Debugging cls index")
+                start_rolling = gr.Slider(minimum=0,maximum=N_LAYERS-1,step=1,label="Start Rolling From")
                 topk_rollout = gr.Slider(minimum=0,maximum=1,step=0.1,label="1 - top k saliency (discard ratio)")
                 rollout_submit = gr.Button(value="Plot rollout",interactive=True)
 
@@ -412,7 +413,7 @@ def build_demo(args, embed_mode=False):
 
             rollout_submit.click(
                 attention_rollout,
-                [state, fusion_method_rollout,cls_index,topk_rollout],
+                [state, fusion_method_rollout,cls_index,topk_rollout,start_rolling],
                 [rollout_plot,rollout_overlay2]
             )
 
@@ -430,6 +431,7 @@ def build_demo(args, embed_mode=False):
             with gr.Row():
                 fusion_method_flow = gr.Dropdown(choices=["mean","min","max"],value="min",label="Fusion Method")
                 cls_idx_rollout = gr.Slider(minimum=0,maximum=20,step=1,label="Debugging cls index")
+                start_flowing = gr.Slider(minimum=0,maximum=N_LAYERS-1,step=1,label="Start flow From")
                 topk_rollout = gr.Slider(minimum=0,maximum=1,step=0.05,label="Discard Ratio")
                 flow_submit = gr.Button(value="Plot Attention",interactive=True)
             with gr.Row():
@@ -452,7 +454,7 @@ def build_demo(args, embed_mode=False):
                 
             flow_submit.click(
                 attention_flow,
-                [state, fusion_method_flow,cls_idx_rollout,topk_rollout],
+                [state, fusion_method_flow,cls_idx_rollout,topk_rollout,start_flowing],
                 [flow_strength_plot,flow_overlay]
             )
 
