@@ -94,7 +94,10 @@ def get_processor_model(args):
     return processor, model
 
 def process_image(image, image_process_mode, return_pil=False, image_format='PNG', max_len=1344, min_len=672):
+    logger.info("this is buggy in the new version is it?")
+    print(image)
     if image_process_mode == "Pad":
+        logger.info("this is buggy in the new version is it?")
         def expand2square(pil_img, background_color=(122, 116, 104)):
             width, height = pil_img.size
             if width == height:
