@@ -3,6 +3,10 @@
 
 [![Typing SVG](https://readme-typing-svg.herokuapp.com?font=Space+Mono&size=50&duration=1500&color=57a773&center=true&vCenter=true&multiline=true&width=1335&height=300&lines=Saliency+Diagnostic+Indicator;For+Radiological+VQA)](https://git.io/typing-svg)
 
+
+[fracture_example.pdf](https://github.com/user-attachments/files/20221275/fracture_example.pdf)
+
+
 ## Setup
 
 - Update submodules
