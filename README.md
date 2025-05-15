@@ -1,7 +1,7 @@
 # A Fork of LVLM-Interpret: An Interpretability Tool for Large Vision-Language Models
 [[Project Page](https://intellabs.github.io/multimodal_cognitive_ai/lvlm_interpret/)] [[Paper](https://arxiv.org/abs/2404.03118)]
 
-[![Typing SVG](https://readme-typing-svg.herokuapp.com?font=Space+Mono&size=50&duration=1500&color=27a733&center=true&vCenter=true&multiline=true&width=1335&height=300&lines=Saliency+Diagnostic+Tool;For+Radiological+VQA)](https://git.io/typing-svg)
+[![Typing SVG](https://readme-typing-svg.herokuapp.com?font=Space+Mono&size=50&duration=1500&color=57aa73&center=true&vCenter=true&multiline=true&width=1335&height=300&lines=Saliency+Diagnostic+Tool;For+Radiological+VQA)](https://git.io/typing-svg)
 
 <img width="1042" alt="image" src="https://github.com/user-attachments/assets/fb3fb9f6-a376-407c-8970-f8f95b1fb63e" />
 
