@@ -8,5 +8,5 @@ accelerate
 matplotlib
 seaborn
 scipy
-bitsandbytes
+bitsandbytes==0.45.2
 einops
